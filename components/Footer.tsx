@@ -174,7 +174,7 @@ const Footer: React.FC = () => {
               </a>
             </div>
             <p className="text-sm text-gray-500">
-              © 2015-2025 Smart Design, LTD. All rights reserved.
+              © 2015-2025 Mixtiles Designer, LTD. All rights reserved.
             </p>
           </div>
         </div>

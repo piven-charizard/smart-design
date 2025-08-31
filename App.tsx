@@ -365,7 +365,7 @@ const App: React.FC = () => {
           <div className="text-center mb-12">
      
             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-              Start by uploading a photo of your room or space where you want to place your plants.
+              Start by uploading a photo of your room or space where you want to put place our products.
             </p>
             <div className="card p-6 max-w-md mx-auto">
               <ImageUploader 
