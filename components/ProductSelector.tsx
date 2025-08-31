@@ -4,7 +4,7 @@
 */
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Product } from '../types';
+import { Product } from './types';
 import ObjectCard from './ObjectCard';
 
 interface ProductSelectorProps {
@@ -83,15 +83,35 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({ products, onSelect, o
                 </button>
                 <div
                     ref={scrollContainerRef}
-                    className="flex space-x-6 overflow-x-auto snap-x snap-mandatory py-4 scrollbar-hide"
+                    className="flex space-x-4 overflow-x-auto snap-x snap-mandatory py-4 scrollbar-hide"
                 >
                     {products.map(product => (
-                         <div key={product.id} className="snap-center shrink-0 w-52 md:w-64">
-                            <ObjectCard
-                                product={product}
-                                isSelected={false}
-                                onClick={() => onSelect(product)}
-                            />
+                         <div key={product.id} className="snap-center shrink-0 w-40 md:w-48">
+                            <div 
+                                draggable="true" 
+                                onDragStart={(e) => {
+                                    e.dataTransfer.effectAllowed = 'move';
+                                    // Auto-select this product when drag starts
+                                    onSelect(product);
+                                    // Hide the plant image during drag
+                                    e.currentTarget.style.opacity = '0.3';
+                                }}
+                                onDragEnd={(e) => {
+                                    // Restore opacity when drag ends
+                                    e.currentTarget.style.opacity = '1';
+                                }}
+                                onTouchStart={(e) => {
+                                    // Auto-select this product when touch starts
+                                    onSelect(product);
+                                }}
+                                className="cursor-move transition-opacity duration-200"
+                            >
+                                <ObjectCard
+                                    product={product}
+                                    isSelected={false}
+                                    onClick={() => onSelect(product)}
+                                />
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -104,14 +124,7 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({ products, onSelect, o
                     <ArrowRightIcon />
                 </button>
             </div>
-            <div className="mt-8">
-                <button
-                    onClick={onAddOwnProductClick}
-                    className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold py-2 px-6 rounded-lg text-md transition-colors border border-zinc-300 shadow-sm"
-                >
-                    Add Your Own Product!
-                </button>
-            </div>
+       
         </div>
     );
 };

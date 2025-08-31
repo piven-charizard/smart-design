@@ -21,11 +21,19 @@ const ObjectCard: React.FC<ObjectCardProps> = ({ product, isSelected, onClick })
 
     return (
         <div className={cardClasses} onClick={onClick}>
-            <div className="aspect-square w-full bg-zinc-100 flex items-center justify-center">
-                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain" />
+            <div className="aspect-square w-full bg-white flex items-center justify-center p-4">
+                <img 
+                    src={product.imageUrl} 
+                    alt={product.name} 
+                    className="w-4/5 h-4/5 object-contain object-center" 
+                    style={{
+                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                        mixBlendMode: 'multiply'
+                    }}
+                />
             </div>
-            <div className="p-3 text-center">
-                <h4 className="text-sm font-semibold text-zinc-700 truncate">{product.name}</h4>
+            <div className="p-2 text-center">
+                <h4 className="text-xs font-medium text-gray-700 truncate">{product.name}</h4>
             </div>
         </div>
     );

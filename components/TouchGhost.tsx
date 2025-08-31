@@ -20,19 +20,13 @@ const TouchGhost: React.FC<TouchGhostProps> = ({ imageUrl, position }) => {
     left: position.x,
     top: position.y,
     transform: 'translate(-50%, -50%)',
-    width: '120px',
-    height: '120px',
     pointerEvents: 'none',
     zIndex: 9999,
   };
 
   return (
-    <div style={style} className="bg-white/80 backdrop-blur-md rounded-2xl shadow-2xl p-2">
-      <img
-        src={imageUrl}
-        alt="Dragging product"
-        className="w-full h-full object-contain"
-      />
+    <div style={style} className="pointer-events-none">
+      <div className="w-6 h-6 bg-pink-500 border-2 border-white rounded-full shadow-lg animate-pulse"></div>
     </div>
   );
 };

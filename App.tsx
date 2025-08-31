@@ -5,10 +5,14 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { generateCompositeImage } from './services/geminiService';
-import { Product } from './types';
+import { Product } from './components/types';
+import { PLANT_PRODUCTS } from './constants/products';
 import Header from './components/Header';
+import Footer from './components/Footer';
 import ImageUploader from './components/ImageUploader';
 import ObjectCard from './components/ObjectCard';
+import ProductSelector from './components/ProductSelector';
+import AddProductModal from './components/AddProductModal';
 import Spinner from './components/Spinner';
 import DebugModal from './components/DebugModal';
 import TouchGhost from './components/TouchGhost';
@@ -56,6 +60,7 @@ const App: React.FC = () => {
   const [debugImageUrl, setDebugImageUrl] = useState<string | null>(null);
   const [debugPrompt, setDebugPrompt] = useState<string | null>(null);
   const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
 
   // State for touch drag & drop
   const [isTouchDragging, setIsTouchDragging] = useState<boolean>(false);
@@ -66,6 +71,26 @@ const App: React.FC = () => {
   
   const sceneImageUrl = sceneImage ? URL.createObjectURL(sceneImage) : null;
   const productImageUrl = selectedProduct ? selectedProduct.imageUrl : null;
+
+  const handleProductSelect = useCallback(async (product: Product) => {
+    setError(null);
+    try {
+      // Fetch the product image and convert to File
+      const response = await fetch(product.imageUrl);
+      if (!response.ok) {
+        throw new Error('Failed to load product image');
+      }
+      const blob = await response.blob();
+      const file = new File([blob], `${product.name.toLowerCase().replace(' ', '-')}.jpg`, { type: 'image/jpeg' });
+      
+      setProductImageFile(file);
+      setSelectedProduct(product);
+    } catch(err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      setError(`Could not load the product image. Details: ${errorMessage}`);
+      console.error(err);
+    }
+  }, []);
 
   const handleProductImageUpload = useCallback((file: File) => {
     // useEffect will handle cleaning up the previous blob URL
@@ -79,6 +104,7 @@ const App: React.FC = () => {
         };
         setProductImageFile(file);
         setSelectedProduct(product);
+        setIsAddProductModalOpen(false);
     } catch(err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setError(`Could not load the product image. Details: ${errorMessage}`);
@@ -89,40 +115,51 @@ const App: React.FC = () => {
   const handleInstantStart = useCallback(async () => {
     setError(null);
     try {
-      // Fetch the default images
-      const [objectResponse, sceneResponse] = await Promise.all([
-        fetch('/assets/object.jpeg'),
-        fetch('/assets/scene.jpeg')
-      ]);
+      // Fetch the office scene
+      const sceneResponse = await fetch('/assets/office.jpg');
 
-      if (!objectResponse.ok || !sceneResponse.ok) {
-        throw new Error('Failed to load default images');
+      if (!sceneResponse.ok) {
+        throw new Error('Failed to load office scene');
       }
 
-      // Convert to blobs then to File objects
-      const [objectBlob, sceneBlob] = await Promise.all([
-        objectResponse.blob(),
-        sceneResponse.blob()
-      ]);
+      // Convert scene to File object
+      const sceneBlob = await sceneResponse.blob();
+      const sceneFile = new File([sceneBlob], 'office.jpg', { type: 'image/jpeg' });
 
-      const objectFile = new File([objectBlob], 'object.jpeg', { type: 'image/jpeg' });
-      const sceneFile = new File([sceneBlob], 'scene.jpeg', { type: 'image/jpeg' });
-
-      // Update state with the new files
+      // Update state with the office scene
       setSceneImage(sceneFile);
-      handleProductImageUpload(objectFile);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      setError(`Could not load default images. Details: ${errorMessage}`);
+      setError(`Could not load office scene. Details: ${errorMessage}`);
       console.error(err);
     }
-  }, [handleProductImageUpload]);
+  }, []);
 
-  const handleProductDrop = useCallback(async (position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => {
-    if (!productImageFile || !sceneImage || !selectedProduct) {
+    const handleProductDrop = useCallback(async (position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => {
+    if (!productImageFile || !selectedProduct) {
       setError('An unexpected error occurred. Please try again.');
       return;
     }
+    
+    // If no scene image exists, try to load a default one
+    let currentSceneImage = sceneImage;
+    if (!currentSceneImage) {
+      try {
+        const sceneResponse = await fetch('/assets/office.jpg');
+        if (sceneResponse.ok) {
+          const sceneBlob = await sceneResponse.blob();
+          currentSceneImage = new File([sceneBlob], 'office.jpg', { type: 'image/jpeg' });
+          setSceneImage(currentSceneImage);
+        } else {
+          setError('Please upload a scene image first, or try the demo.');
+          return;
+        }
+      } catch (err) {
+        setError('Please upload a scene image first, or try the demo.');
+        return;
+      }
+    }
+    
     setPersistedOrbPosition(position);
     setIsLoading(true);
     setError(null);
@@ -130,8 +167,8 @@ const App: React.FC = () => {
       const { finalImageUrl, debugImageUrl, finalPrompt } = await generateCompositeImage(
         productImageFile, 
         selectedProduct.name,
-        sceneImage,
-        sceneImage.name,
+        currentSceneImage,
+        currentSceneImage.name,
         relativePosition
       );
       setDebugImageUrl(debugImageUrl);
@@ -139,8 +176,7 @@ const App: React.FC = () => {
       const newSceneFile = dataURLtoFile(finalImageUrl, `generated-scene-${Date.now()}.jpeg`);
       setSceneImage(newSceneFile);
 
-    } catch (err)
- {
+    } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setError(`Failed to generate the image. ${errorMessage}`);
       console.error(err);
@@ -177,6 +213,10 @@ const App: React.FC = () => {
     setPersistedOrbPosition(null);
     setDebugImageUrl(null);
     setDebugPrompt(null);
+  }, []);
+
+  const handleAddOwnProductClick = useCallback(() => {
+    setIsAddProductModalOpen(true);
   }, []);
 
   useEffect(() => {
@@ -300,12 +340,17 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (error) {
        return (
-           <div className="text-center animate-fade-in bg-red-50 border border-red-200 p-8 rounded-lg max-w-2xl mx-auto">
-            <h2 className="text-3xl font-extrabold mb-4 text-red-800">An Error Occurred</h2>
-            <p className="text-lg text-red-700 mb-6">{error}</p>
+           <div className="text-center animate-fade-in card bg-red-50 border-red-200 p-8 max-w-2xl mx-auto">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.382 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold mb-4 text-red-800">Oops! Something went wrong</h2>
+            <p className="text-red-700 mb-6">{error}</p>
             <button
                 onClick={handleReset}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors"
+                className="bg-pink-500 text-white px-6 py-3 rounded-md font-medium hover:bg-pink-600 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 Try Again
             </button>
@@ -313,20 +358,16 @@ const App: React.FC = () => {
         );
     }
     
-    if (!productImageFile || !sceneImage) {
+        if (!sceneImage) {
       return (
         <div className="w-full max-w-6xl mx-auto animate-fade-in">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-            <div className="flex flex-col">
-              <h2 className="text-2xl font-extrabold text-center mb-5 text-zinc-800">Upload Product</h2>
-              <ImageUploader 
-                id="product-uploader"
-                onFileSelect={handleProductImageUpload}
-                imageUrl={productImageUrl}
-              />
-            </div>
-            <div className="flex flex-col">
-              <h2 className="text-2xl font-extrabold text-center mb-5 text-zinc-800">Upload Scene</h2>
+          {/* Space Upload Section */}
+          <div className="text-center mb-12">
+     
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+              Start by uploading a photo of your room or space where you want to place your plants.
+            </p>
+            <div className="card p-6 max-w-md mx-auto">
               <ImageUploader 
                 id="scene-uploader"
                 onFileSelect={setSceneImage}
@@ -334,20 +375,46 @@ const App: React.FC = () => {
               />
             </div>
           </div>
-          <div className="text-center mt-10 min-h-[4rem] flex flex-col justify-center items-center">
-            <p className="text-zinc-500 animate-fade-in">
-              Upload a product image and a scene image to begin.
+          
+          {/* Demo Link */}
+          <div className="text-center mt-6">
+            <button
+              onClick={handleInstantStart}
+              className="text-pink-600 hover:text-pink-800 font-medium underline text-sm"
+            >
+              Try Demo with Sample Images
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (!selectedProduct) {
+      return (
+        <div className="w-full max-w-6xl mx-auto animate-fade-in">
+          {/* Product Selection Section */}
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Plant</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+              Now select from our curated collection of beautiful houseplants to design your perfect space.
             </p>
-            <p className="text-zinc-500 animate-fade-in mt-2">
-              Or click{' '}
-              <button
-                onClick={handleInstantStart}
-                className="font-bold text-blue-600 hover:text-blue-800 underline transition-colors"
-              >
-                here
-              </button>
-              {' '}for an instant start.
-            </p>
+            <ProductSelector 
+              products={PLANT_PRODUCTS}
+              onSelect={handleProductSelect}
+              onAddOwnProductClick={handleAddOwnProductClick}
+            />
+          </div>
+          
+          {/* Show the uploaded space */}
+          <div className="mb-12">
+            <h3 className="text-xl font-semibold text-center mb-5 text-gray-800">Your Space</h3>
+            <div className="card p-2 max-w-2xl mx-auto">
+              <img 
+                src={sceneImageUrl} 
+                alt="Your uploaded space" 
+                className="w-full h-auto rounded-lg"
+              />
+            </div>
           </div>
         </div>
       );
@@ -355,76 +422,83 @@ const App: React.FC = () => {
 
     return (
       <div className="w-full max-w-7xl mx-auto animate-fade-in">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-          {/* Product Column */}
-          <div className="md:col-span-1 flex flex-col">
-            <h2 className="text-2xl font-extrabold text-center mb-5 text-zinc-800">Product</h2>
-            <div className="flex-grow flex items-center justify-center">
-              <div 
-                  draggable="true" 
-                  onDragStart={(e) => {
-                      e.dataTransfer.effectAllowed = 'move';
-                      e.dataTransfer.setDragImage(transparentDragImage, 0, 0);
-                  }}
-                  onTouchStart={handleTouchStart}
-                  className="cursor-move w-full max-w-xs"
-              >
-                  <ObjectCard product={selectedProduct!} isSelected={true} />
-              </div>
-            </div>
-            <div className="text-center mt-4">
-               <div className="h-5 flex items-center justify-center">
-                <button
-                    onClick={handleChangeProduct}
-                    className="text-sm text-blue-600 hover:text-blue-800 font-semibold"
-                >
-                    Change Product
-                </button>
-               </div>
-            </div>
+        {/* Instructions */}
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Your Perfect Composition</h2>
+          <p className="text-gray-600">
+            Choose a plant and drag it onto your space to see how it looks
+          </p>
+        </div>
+        
+        {/* Products Carousel Above */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">Choose Your Plant</h3>
+          <ProductSelector 
+            products={PLANT_PRODUCTS}
+            onSelect={handleProductSelect}
+            onAddOwnProductClick={handleAddOwnProductClick}
+          />
+        </div>
+        
+        
+                {/* Space Below */}
+        <div className="card p-6 max-w-4xl mx-auto relative">
+          <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">Your Space</h3>
+          <div className="flex-grow flex items-center justify-center">
+            <ImageUploader 
+                ref={sceneImgRef}
+                id="scene-uploader" 
+                onFileSelect={setSceneImage} 
+                imageUrl={sceneImageUrl}
+                isDropZone={!isLoading}
+                onProductDrop={handleProductDrop}
+                persistedOrbPosition={persistedOrbPosition}
+                showDebugButton={!!debugImageUrl && !isLoading}
+                onDebugClick={() => setIsDebugModalOpen(true)}
+                isTouchHovering={isHoveringDropZone}
+                touchOrbPosition={touchOrbPosition}
+            />
           </div>
-          {/* Scene Column */}
-          <div className="md:col-span-2 flex flex-col">
-            <h2 className="text-2xl font-extrabold text-center mb-5 text-zinc-800">Scene</h2>
-            <div className="flex-grow flex items-center justify-center">
-              <ImageUploader 
-                  ref={sceneImgRef}
-                  id="scene-uploader" 
-                  onFileSelect={setSceneImage} 
-                  imageUrl={sceneImageUrl}
-                  isDropZone={!!sceneImage && !isLoading}
-                  onProductDrop={handleProductDrop}
-                  persistedOrbPosition={persistedOrbPosition}
-                  showDebugButton={!!debugImageUrl && !isLoading}
-                  onDebugClick={() => setIsDebugModalOpen(true)}
-                  isTouchHovering={isHoveringDropZone}
-                  touchOrbPosition={touchOrbPosition}
-              />
-            </div>
-            <div className="text-center mt-4">
-              <div className="h-5 flex items-center justify-center">
-                {sceneImage && !isLoading && (
-                  <button
-                      onClick={handleChangeScene}
-                      className="text-sm text-blue-600 hover:text-blue-800 font-semibold"
-                  >
-                      Change Scene
-                  </button>
-                )}
+          
+          {/* Loading Overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-lg flex items-center justify-center z-10 animate-fade-in">
+              <div className="text-center">
+                <Spinner />
+                <h3 className="text-lg font-semibold text-gray-900 mt-4 mb-2">Creating Magic</h3>
+                <p className="text-gray-600 transition-opacity duration-500">{loadingMessages[loadingMessageIndex]}</p>
               </div>
             </div>
+          )}
+          
+          <div className="text-center mt-4">
+            {sceneImage && !isLoading && (
+              <button
+                  onClick={handleChangeScene}
+                  className="text-sm text-pink-600 hover:text-pink-800 font-medium underline"
+              >
+                  Change Scene
+              </button>
+            )}
           </div>
         </div>
-        <div className="text-center mt-10 min-h-[8rem] flex flex-col justify-center items-center">
-           {isLoading ? (
-             <div className="animate-fade-in">
-                <Spinner />
-                <p className="text-xl mt-4 text-zinc-600 transition-opacity duration-500">{loadingMessages[loadingMessageIndex]}</p>
+        
+        {/* Status Section */}
+        <div className="text-center mt-8">
+           {!isLoading && (
+             <div className="bg-gray-50 rounded-xl p-6 max-w-lg mx-auto animate-fade-in">
+               <div className="flex items-center justify-center mb-3">
+                 <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center mr-3">
+                   <svg className="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3.5M7 21h10" />
+                   </svg>
+                 </div>
+                 <h3 className="text-lg font-semibold text-gray-900">Ready to Place</h3>
+               </div>
+               <p className="text-gray-600">
+                  Drag the product to your desired location or click directly on the scene
+               </p>
              </div>
-           ) : (
-             <p className="text-zinc-500 animate-fade-in">
-                Drag the product onto a location in the scene, or simply click where you want it.
-             </p>
            )}
         </div>
       </div>
@@ -432,22 +506,28 @@ const App: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen bg-white text-zinc-800 flex items-center justify-center p-4 md:p-8">
+    <div className="min-h-screen bg-white text-zinc-800 flex flex-col">
       <TouchGhost 
         imageUrl={isTouchDragging ? productImageUrl : null} 
         position={touchGhostPosition}
       />
-      <div className="flex flex-col items-center gap-8 w-full">
-        <Header />
-        <main className="w-full">
+      <Header />
+      <main className="flex-1 px-4 md:px-8 py-12">
+        <div className="max-w-7xl mx-auto">
           {renderContent()}
-        </main>
-      </div>
+        </div>
+      </main>
+      <Footer />
       <DebugModal 
         isOpen={isDebugModalOpen} 
         onClose={() => setIsDebugModalOpen(false)}
         imageUrl={debugImageUrl}
         prompt={debugPrompt}
+      />
+      <AddProductModal 
+        isOpen={isAddProductModalOpen} 
+        onClose={() => setIsAddProductModalOpen(false)}
+        onFileSelect={handleProductImageUpload}
       />
     </div>
   );
