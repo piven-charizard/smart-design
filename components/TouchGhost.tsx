@@ -26,7 +26,7 @@ const TouchGhost: React.FC<TouchGhostProps> = ({ imageUrl, position }) => {
 
   return (
     <div style={style} className="pointer-events-none">
-      <div className="w-6 h-6 bg-pink-500 border-2 border-white rounded-full shadow-lg animate-pulse"></div>
+      <div className="w-8 h-8 bg-white border-3 border-pink-500 rounded-full shadow-xl"></div>
     </div>
   );
 };

@@ -93,8 +93,12 @@ const ProductSelector: React.FC<ProductSelectorProps> = ({ products, onSelect, o
                                     e.dataTransfer.effectAllowed = 'move';
                                     // Auto-select this product when drag starts
                                     onSelect(product);
-                                    // Hide the plant image during drag
-                                    e.currentTarget.style.opacity = '0.3';
+                                    // Completely hide the plant image during drag
+                                    e.currentTarget.style.opacity = '0';
+                                    // Set a completely transparent drag image
+                                    const transparentImage = new Image();
+                                    transparentImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                                    e.dataTransfer.setDragImage(transparentImage, 0, 0);
                                 }}
                                 onDragEnd={(e) => {
                                     // Restore opacity when drag ends

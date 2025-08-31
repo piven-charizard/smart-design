@@ -361,11 +361,14 @@ const App: React.FC = () => {
         if (!sceneImage) {
       return (
         <div className="w-full max-w-6xl mx-auto animate-fade-in">
-          {/* Space Upload Section */}
+          {/* Step 1: Upload Space */}
           <div className="text-center mb-12">
-     
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-6">
+              <span className="text-pink-600 font-bold text-lg">1</span>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Upload Your Space</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-              Start by uploading a photo of your room or space where you want to put place our products.
+              Start by uploading a photo of your room or space where you want to place our products.
             </p>
             <div className="card p-6 max-w-md mx-auto">
               <ImageUploader 
@@ -392,9 +395,12 @@ const App: React.FC = () => {
     if (!selectedProduct) {
       return (
         <div className="w-full max-w-6xl mx-auto animate-fade-in">
-          {/* Product Selection Section */}
+          {/* Step 2: Choose Product */}
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Plant</h2>
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-6">
+              <span className="text-pink-600 font-bold text-lg">2</span>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Choose Your Plant</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
               Now select from our curated collection of beautiful houseplants to design your perfect space.
             </p>
@@ -422,8 +428,11 @@ const App: React.FC = () => {
 
     return (
       <div className="w-full max-w-7xl mx-auto animate-fade-in">
-        {/* Instructions */}
+        {/* Step 3: Create Composition */}
         <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-6 mx-auto">
+            <span className="text-pink-600 font-bold text-lg">3</span>
+          </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Your Perfect Composition</h2>
           <p className="text-gray-600">
             Choose a plant and drag it onto your space to see how it looks
