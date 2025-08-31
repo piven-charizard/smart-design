@@ -6,12 +6,13 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { generateCompositeImage } from './services/geminiService';
 import { Product } from './components/types';
-import { PLANT_PRODUCTS } from './constants/products';
+import { PLANT_PRODUCTS, MIXTILES_PRODUCTS, ALL_PRODUCTS } from './constants/products';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ImageUploader from './components/ImageUploader';
 import ObjectCard from './components/ObjectCard';
 import ProductSelector from './components/ProductSelector';
+
 import AddProductModal from './components/AddProductModal';
 import Spinner from './components/Spinner';
 import DebugModal from './components/DebugModal';
@@ -116,7 +117,7 @@ const App: React.FC = () => {
     setError(null);
     try {
       // Fetch the office scene
-      const sceneResponse = await fetch('/assets/office.jpg');
+      const sceneResponse = await fetch('/public/office.jpg');
 
       if (!sceneResponse.ok) {
         throw new Error('Failed to load office scene');
@@ -145,7 +146,7 @@ const App: React.FC = () => {
     let currentSceneImage = sceneImage;
     if (!currentSceneImage) {
       try {
-        const sceneResponse = await fetch('/assets/office.jpg');
+        const sceneResponse = await fetch('/public/office.jpg');
         if (sceneResponse.ok) {
           const sceneBlob = await sceneResponse.blob();
           currentSceneImage = new File([sceneBlob], 'office.jpg', { type: 'image/jpeg' });
@@ -362,12 +363,12 @@ const App: React.FC = () => {
       return (
         <div className="w-full max-w-6xl mx-auto animate-fade-in">
           {/* Step 1: Upload Space */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-6">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-4">
               <span className="text-pink-600 font-bold text-lg">1</span>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Upload Your Space</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Upload Your Space</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
               Start by uploading a photo of your room or space where you want to place our products.
             </p>
             <div className="card p-6 max-w-md mx-auto">
@@ -395,31 +396,54 @@ const App: React.FC = () => {
     if (!selectedProduct) {
       return (
         <div className="w-full max-w-6xl mx-auto animate-fade-in">
+          {/* Go Back Button */}
+          <div className="text-left mb-6">
+            <button
+              onClick={() => setSceneImage(null)}
+              className="inline-flex items-center text-pink-600 hover:text-pink-800 font-medium transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Step 1
+            </button>
+          </div>
+          
           {/* Step 2: Choose Product */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-6">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-4">
               <span className="text-pink-600 font-bold text-lg">2</span>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Choose Your Plant</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-              Now select from our curated collection of beautiful houseplants to design your perfect space.
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Choose Your Product</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
+              Select from our curated collection of beautiful houseplants and Mixtiles photos to design your perfect space.
             </p>
             <ProductSelector 
-              products={PLANT_PRODUCTS}
+              products={ALL_PRODUCTS}
               onSelect={handleProductSelect}
               onAddOwnProductClick={handleAddOwnProductClick}
             />
           </div>
           
+
+          
           {/* Show the uploaded space */}
-          <div className="mb-12">
-            <h3 className="text-xl font-semibold text-center mb-5 text-gray-800">Your Space</h3>
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold text-center mb-4 text-gray-800">Your Space</h3>
             <div className="card p-2 max-w-2xl mx-auto">
               <img 
                 src={sceneImageUrl} 
                 alt="Your uploaded space" 
-                className="w-full h-auto rounded-lg"
+                className="w-full h-auto max-h-96 rounded-lg object-cover"
               />
+            </div>
+            <div className="text-center mt-4">
+              <button
+                onClick={() => setSceneImage(null)}
+                className="text-sm text-pink-600 hover:text-pink-800 font-medium underline"
+              >
+                Change Space
+              </button>
             </div>
           </div>
         </div>
@@ -429,30 +453,32 @@ const App: React.FC = () => {
     return (
       <div className="w-full max-w-7xl mx-auto animate-fade-in">
         {/* Step 3: Create Composition */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-6 mx-auto">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-4 mx-auto">
             <span className="text-pink-600 font-bold text-lg">3</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Your Perfect Composition</h2>
           <p className="text-gray-600">
-            Choose a plant and drag it onto your space to see how it looks
+            Choose a product and drag it onto your space to see how it looks
           </p>
         </div>
         
         {/* Products Carousel Above */}
         <div className="mb-8">
-          <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">Choose Your Plant</h3>
+          <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">Choose Your Product</h3>
           <ProductSelector 
-            products={PLANT_PRODUCTS}
+            products={ALL_PRODUCTS}
             onSelect={handleProductSelect}
             onAddOwnProductClick={handleAddOwnProductClick}
           />
         </div>
         
+
+        
         
                 {/* Space Below */}
         <div className="card p-6 max-w-4xl mx-auto relative">
-          <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">Your Space</h3>
+          <h3 className="text-lg font-semibold text-center mb-3 text-gray-800">Your Space</h3>
           <div className="flex-grow flex items-center justify-center">
             <ImageUploader 
                 ref={sceneImgRef}

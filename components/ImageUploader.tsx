@@ -190,7 +190,7 @@ const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, la
               ref={imgRef}
               src={imageUrl} 
               alt={label || 'Uploaded Scene'} 
-              className="w-full h-full object-contain" 
+              className="w-full h-full max-h-96 object-contain" 
             />
             <div 
                 className="drop-orb" 
