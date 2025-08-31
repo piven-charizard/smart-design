@@ -117,7 +117,7 @@ const App: React.FC = () => {
     setError(null);
     try {
       // Fetch the office scene
-      const sceneResponse = await fetch('/public/office.jpg');
+      const sceneResponse = await fetch('/assets/office.jpg');
 
       if (!sceneResponse.ok) {
         throw new Error('Failed to load office scene');
@@ -146,7 +146,7 @@ const App: React.FC = () => {
     let currentSceneImage = sceneImage;
     if (!currentSceneImage) {
       try {
-        const sceneResponse = await fetch('/public/office.jpg');
+        const sceneResponse = await fetch('/assets/office.jpg');
         if (sceneResponse.ok) {
           const sceneBlob = await sceneResponse.blob();
           currentSceneImage = new File([sceneBlob], 'office.jpg', { type: 'image/jpeg' });
@@ -434,7 +434,7 @@ const App: React.FC = () => {
               <img 
                 src={sceneImageUrl} 
                 alt="Your uploaded space" 
-                className="w-full h-auto max-h-96 rounded-lg object-cover"
+                className="w-full h-auto max-h-96 rounded-lg object-contain"
               />
             </div>
             <div className="text-center mt-4">
