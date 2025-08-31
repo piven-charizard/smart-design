@@ -477,7 +477,7 @@ const App: React.FC = () => {
         
         
                 {/* Space Below */}
-        <div className="card p-6 max-w-4xl mx-auto relative">
+        <div className="card p-6 max-w-8xl mx-auto relative">
           <h3 className="text-lg font-semibold text-center mb-3 text-gray-800">Your Space</h3>
           <div className="flex-grow flex items-center justify-center">
             <ImageUploader 
