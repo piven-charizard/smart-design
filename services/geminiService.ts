@@ -347,9 +347,9 @@ Provide only the two descriptions concatenated in a few sentences.
   -   **Exact Placement (Crucial):** Place the product at the single, precise location described below. The model must use the dense, semantic description to understand and find the exact spot in the scene.
       -   **Product Location:** "${semanticLocationDescription}"
   
-  -      **Type-Specific Rules:**
-       -   **For Easyplant products (potted plants):** Products must be placed on horizontal surfaces (e.g., floors, tables, shelves, countertops). The bottom of the pot must make full and stable contact with the surface. The plant and pot should be scaled to look natural in the space, as if it belongs there. Ensure the plant appears to be receiving light from the scene's sources. **CRITICAL:** The plant must look exactly like the original product image - same pot color, same plant type, same leaf arrangement, same overall appearance. Do not change the plant's visual characteristics.
-       -   **For Mixtiles products (photo tiles):** Products must be mounted vertically on walls. They must be perfectly aligned with the wall surface, not floating or at an awkward angle. **CRITICAL:** The photo tiles must look exactly like the original product images - same frame style, same photo content, same colors, same proportions. Do not change the photos or frames in any way.
+  -   **Type-Specific Rules:**
+      -   **For Easyplant products (potted plants):** Products must be placed on horizontal surfaces (e.g., floors, tables, shelves, countertops). The bottom of the pot must make full and stable contact with the surface. The plant and pot should be scaled to look natural in the space, as if it belongs there. Ensure the plant appears to be receiving light from the scene's sources.
+      -   **For Mixtiles products (photo tiles):** Products must be mounted vertically on walls. They must be perfectly aligned with the wall surface, not floating or at an awkward angle. Maintain a realistic appearance for wall-mounted art.
   
   -   **Environmental Realism:**
       -   Do not simply copy and paste the product. Intelligently re-render it to fit the context. Adjust the product's perspective, scale, and orientation for its most natural position.
