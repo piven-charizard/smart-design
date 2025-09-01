@@ -51,6 +51,7 @@ const loadingMessages = [
 
 
 const App: React.FC = () => {
+  const [currentStep, setCurrentStep] = useState<'home' | 'step1' | 'step2' | 'step3'>('home');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
   const [sceneImage, setSceneImage] = useState<File | null>(null);
@@ -86,6 +87,7 @@ const App: React.FC = () => {
       
       setProductImageFile(file);
       setSelectedProduct(product);
+      setCurrentStep('step3');
     } catch(err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setError(`Could not load the product image. Details: ${errorMessage}`);
@@ -105,6 +107,7 @@ const App: React.FC = () => {
         };
         setProductImageFile(file);
         setSelectedProduct(product);
+        setCurrentStep('step3');
         setIsAddProductModalOpen(false);
     } catch(err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -129,6 +132,7 @@ const App: React.FC = () => {
 
       // Update state with the office scene
       setSceneImage(sceneFile);
+      setCurrentStep('step2');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setError(`Could not load office scene. Details: ${errorMessage}`);
@@ -190,6 +194,7 @@ const App: React.FC = () => {
 
   const handleReset = useCallback(() => {
     // Let useEffect handle URL revocation
+    setCurrentStep('home');
     setSelectedProduct(null);
     setProductImageFile(null);
     setSceneImage(null);
@@ -211,9 +216,19 @@ const App: React.FC = () => {
   
   const handleChangeScene = useCallback(() => {
     setSceneImage(null);
+    setCurrentStep('step1');
     setPersistedOrbPosition(null);
     setDebugImageUrl(null);
     setDebugPrompt(null);
+  }, []);
+
+  const handleStartDesign = useCallback(() => {
+    setCurrentStep('step1');
+  }, []);
+
+  const handleSceneUpload = useCallback((file: File) => {
+    setSceneImage(file);
+    setCurrentStep('step2');
   }, []);
 
   const handleAddOwnProductClick = useCallback(() => {
@@ -358,10 +373,44 @@ const App: React.FC = () => {
           </div>
         );
     }
-    
-        if (!sceneImage) {
+
+    // Home page
+    if (currentStep === 'home') {
+      return (
+        <div className="w-full max-w-4xl mx-auto animate-fade-in text-center">
+          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+            Mixtiles Designer
+          </h1>
+          <h2 className="text-xl md:text-2xl text-gray-600 font-medium mb-8">
+            Space Design Reinvented
+          </h2>
+          <button
+            onClick={handleStartDesign}
+            className="bg-pink-500 text-white px-8 py-4 rounded-md text-lg font-medium hover:bg-pink-600 transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            Design Your Space
+          </button>
+        </div>
+      );
+    }
+
+    // Step 1: Upload Space
+    if (currentStep === 'step1') {
       return (
         <div className="w-full max-w-6xl mx-auto animate-fade-in">
+          {/* Go Back Button */}
+          <div className="text-left mb-6">
+            <button
+              onClick={() => setCurrentStep('home')}
+              className="inline-flex items-center text-pink-600 hover:text-pink-800 font-medium transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Home
+            </button>
+          </div>
+          
           {/* Step 1: Upload Space */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-4">
@@ -374,7 +423,7 @@ const App: React.FC = () => {
             <div className="card p-6 max-w-md mx-auto">
               <ImageUploader 
                 id="scene-uploader"
-                onFileSelect={setSceneImage}
+                onFileSelect={handleSceneUpload}
                 imageUrl={sceneImageUrl}
               />
             </div>
@@ -393,13 +442,14 @@ const App: React.FC = () => {
       );
     }
 
-    if (!selectedProduct) {
+    // Step 2: Choose Product
+    if (currentStep === 'step2') {
       return (
         <div className="w-full max-w-6xl mx-auto animate-fade-in">
           {/* Go Back Button */}
           <div className="text-left mb-6">
             <button
-              onClick={() => setSceneImage(null)}
+              onClick={() => setCurrentStep('step1')}
               className="inline-flex items-center text-pink-600 hover:text-pink-800 font-medium transition-colors"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -425,8 +475,6 @@ const App: React.FC = () => {
             />
           </div>
           
-
-          
           {/* Show the uploaded space */}
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-center mb-4 text-gray-800">Your Space</h3>
@@ -439,7 +487,7 @@ const App: React.FC = () => {
             </div>
             <div className="text-center mt-4">
               <button
-                onClick={() => setSceneImage(null)}
+                onClick={handleChangeScene}
                 className="text-sm text-pink-600 hover:text-pink-800 font-medium underline"
               >
                 Change Space
@@ -450,8 +498,22 @@ const App: React.FC = () => {
       );
     }
 
+    // Step 3: Create Composition
     return (
       <div className="w-full max-w-7xl mx-auto animate-fade-in">
+        {/* Go Back Button */}
+        <div className="text-left mb-6">
+          <button
+            onClick={() => setCurrentStep('step2')}
+            className="inline-flex items-center text-pink-600 hover:text-pink-800 font-medium transition-colors"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Step 2
+          </button>
+        </div>
+        
         {/* Step 3: Create Composition */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-4 mx-auto">
@@ -473,17 +535,14 @@ const App: React.FC = () => {
           />
         </div>
         
-
-        
-        
-                {/* Space Below */}
+        {/* Space Below */}
         <div className="card p-6 max-w-8xl mx-auto relative">
           <h3 className="text-lg font-semibold text-center mb-3 text-gray-800">Your Space</h3>
           <div className="flex-grow flex items-center justify-center">
             <ImageUploader 
                 ref={sceneImgRef}
                 id="scene-uploader" 
-                onFileSelect={setSceneImage} 
+                onFileSelect={handleSceneUpload} 
                 imageUrl={sceneImageUrl}
                 isDropZone={!isLoading}
                 onProductDrop={handleProductDrop}
@@ -541,17 +600,19 @@ const App: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen bg-white text-zinc-800 flex flex-col">
+    <div className="bg-white text-zinc-800">
       <TouchGhost 
         imageUrl={isTouchDragging ? productImageUrl : null} 
         position={touchGhostPosition}
       />
-      <Header />
-      <main className="flex-1 px-4 md:px-8 py-12">
-        <div className="max-w-7xl mx-auto">
-          {renderContent()}
-        </div>
-      </main>
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 p-4 md:p-8 flex items-center justify-center">
+          <div className="w-full max-w-7xl mx-auto">
+            {renderContent()}
+          </div>
+        </main>
+      </div>
       <Footer />
       <DebugModal 
         isOpen={isDebugModalOpen} 

@@ -336,34 +336,25 @@ Provide only the two descriptions concatenated in a few sentences.
   const cleanEnvironmentImagePart = await fileToPart(resizedEnvironmentImage); // IMPORTANT: Use clean image
   
   const prompt = `
-  **Role:**
-  You are a creative and technical visual composition expert for interior design, specializing in realistic product staging. Your task is to take a 'product' image and seamlessly integrate it into a 'scene' image, resulting in a photorealistic composite. You must adhere to the laws of physics and the specific business models of Easyplant and Mixtiles.
-  
-  **Specifications:**
-  -   **Product Image (Input 1):** The first image provided. The product may be surrounded by a background or padding; you must isolate and use only the product itself, treating the rest as transparent.
-  -   **Scene Image (Input 2):** The second image provided. This is the interior space where the product will be placed.
-  
-  **Placement & Realism Guidelines:**
-  -   **Exact Placement (Crucial):** Place the product at the single, precise location described below. The model must use the dense, semantic description to understand and find the exact spot in the scene.
-      -   **Product Location:** "${semanticLocationDescription}"
-  
-  -   **Type-Specific Rules:**
-      -   **For Easyplant products (potted plants):** Products must be placed on horizontal surfaces (e.g., floors, tables, shelves, countertops). The bottom of the pot must make full and stable contact with the surface. The plant and pot should be scaled to look natural in the space, as if it belongs there. Ensure the plant appears to be receiving light from the scene's sources.
-      -   **For Mixtiles products (photo tiles):** Products must be mounted vertically on walls. They must be perfectly aligned with the wall surface, not floating or at an awkward angle. Maintain a realistic appearance for wall-mounted art.
-  
-  -   **Environmental Realism:**
-      -   Do not simply copy and paste the product. Intelligently re-render it to fit the context. Adjust the product's perspective, scale, and orientation for its most natural position.
-      -   The final image must have the exact same style, lighting, shadows, reflections, and camera perspective as the original scene.
-      -   The product must cast realistic, soft shadows and receive appropriate highlights based on the scene's light sources.
-      -   Maintain proportional realism. A small potted plant shouldn't be taller than a person, and a photo tile should not be larger than a window.
-  
-  -   **Constraints:**
-      -   Do not add any objects, furniture, or elements that are not already present in the original scene image.
-      -   The output must not be the original scene image without the product placement. The composite image must always include the product.
-  
-  **Final Output:**
-  The output should ONLY be the final, composed, photorealistic image. No text, no explanations, no code.
-  `;
+**Role:**
+You are a visual composition expert. Your task is to take a 'product' image and seamlessly integrate it into a 'scene' image, adjusting for perspective, lighting, and scale.
+
+**Specifications:**
+-   **Product to add:**
+    The first image provided. It may be surrounded by black padding or background, which you should ignore and treat as transparent and only keep the product.
+-   **Scene to use:**
+    The second image provided. It may also be surrounded by black padding, which you should ignore.
+-   **Placement Instruction (Crucial):**
+    -   You must place the product at the location described below exactly. You should only place the product once. Use this dense, semantic description to find the exact spot in the scene.
+    -   **Product location Description:** "${semanticLocationDescription}"
+-   **Final Image Requirements:**
+    -   The output image's style, lighting, shadows, reflections, and camera perspective must exactly match the original scene.
+    -   Do not just copy and paste the product. You must intelligently re-render it to fit the context. Adjust the product's perspective and orientation to its most natural position, scale it appropriately, and ensure it casts realistic shadows according to the scene's light sources.
+    -   The product must have proportional realism. For example, a lamp product can't be bigger than a sofa in scene.
+    -   You must not return the original scene image without product placement. The product must be always present in the composite image.
+
+The output should ONLY be the final, composed image. Do not add any text or explanation.
+`;
 
   const textPart = { text: prompt };
   
