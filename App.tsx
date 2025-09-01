@@ -41,12 +41,12 @@ const dataURLtoFile = (dataurl: string, filename: string): File => {
 }
 
 const loadingMessages = [
-    "Analyzing your product...",
-    "Surveying the scene...",
-    "Describing placement location with AI...",
-    "Crafting the perfect composition prompt...",
-    "Generating photorealistic options...",
-    "Assembling the final scene..."
+    "Analyzing your tiles and easyplants...",
+    "Exploring your space...",
+    "Finding the perfect spot with AI...",
+    "Designing your tiles and easyplants arrangement...",
+    "Creating a photorealistic preview...",
+    "Bringing your tiles and easyplants vision to life..."
 ];
 
 

@@ -295,25 +295,20 @@ export const generateCompositeImage = async (
   console.log('Generating semantic location description with gemini-2.5-flash-lite...');
   
   const markedEnvironmentImagePart = await fileToPart(markedResizedEnvironmentImage);
-
   const descriptionPrompt = `
-You are an expert scene analyst. I will provide you with an image that has a red marker on it.
-Your task is to provide a very dense, semantic description of what is at the exact location of the red marker.
-Be specific about surfaces, objects, and spatial relationships. This description will be used to guide another AI in placing a new object.
-
-Example semantic descriptions:
-- "The product location is on the dark grey fabric of the sofa cushion, in the middle section, slightly to the left of the white throw pillow."
-- "The product location is on the light-colored wooden floor, in the patch of sunlight coming from the window, about a foot away from the leg of the brown leather armchair."
-- "The product location is on the white marble countertop, just to the right of the stainless steel sink and behind the green potted plant."
-
-On top of the semantic description above, give a rough relative-to-image description.
-
-Example relative-to-image descriptions:
-- "The product location is about 10% away from the bottom-left of the image."
-- "The product location is about 20% away from the right of the image."
-
-Provide only the two descriptions concatenated in a few sentences.
-`;
+  You are an expert scene analyst. I will provide an image that has a red marker on it.
+  Describe *exactly what is at the marker* so another AI can place a product there realistically.
+  
+  Write 2-3 concise sentences that include:
+  • The support plane at the marker (WALL / FLOOR / TABLETOP / SHELF) and the surface material/finish (e.g., painted drywall, plaster, wood grain, stone, laminate, glass).
+  • Nearby anchors for scale/alignment (e.g., "10 cm below the shelf edge", "aligned with the picture frame's bottom edge", "on the wood desktop near the keyboard").
+  • Lighting direction and quality at the spot (e.g., "soft top-left light, mild falloff", "hard sunlight from right creating sharp shadow").
+  • Whether this spot is suitable for a **wall-mounted object** (Mixtiles tile) or a **resting object** (Easyplant pot) and why (vertical vs horizontal plane, clearance, visible edge, etc).
+  
+  Then add a short relative-to-image description (e.g., "About 15% in from the left and 20% up from the bottom of the image").
+  
+  Return only natural sentences (no lists or JSON). Be precise and do not invent objects that aren't visible.
+  `;
   
   let semanticLocationDescription = '';
   try {
@@ -336,25 +331,58 @@ Provide only the two descriptions concatenated in a few sentences.
   const cleanEnvironmentImagePart = await fileToPart(resizedEnvironmentImage); // IMPORTANT: Use clean image
   
   const prompt = `
-**Role:**
-You are a visual composition expert. Your task is to take a 'product' image and seamlessly integrate it into a 'scene' image, adjusting for perspective, lighting, and scale.
-
-**Specifications:**
--   **Product to add:**
-    The first image provided. It may be surrounded by black padding or background, which you should ignore and treat as transparent and only keep the product.
--   **Scene to use:**
-    The second image provided. It may also be surrounded by black padding, which you should ignore.
--   **Placement Instruction (Crucial):**
-    -   You must place the product at the location described below exactly. You should only place the product once. Use this dense, semantic description to find the exact spot in the scene.
-    -   **Product location Description:** "${semanticLocationDescription}"
--   **Final Image Requirements:**
-    -   The output image's style, lighting, shadows, reflections, and camera perspective must exactly match the original scene.
-    -   Do not just copy and paste the product. You must intelligently re-render it to fit the context. Adjust the product's perspective and orientation to its most natural position, scale it appropriately, and ensure it casts realistic shadows according to the scene's light sources.
-    -   The product must have proportional realism. For example, a lamp product can't be bigger than a sofa in scene.
-    -   You must not return the original scene image without product placement. The product must be always present in the composite image.
-
-The output should ONLY be the final, composed image. Do not add any text or explanation.
-`;
+  **Role**
+  You are a visual composition expert. Take a 'product' image (first) and seamlessly integrate it into a 'scene' image (second), adjusting for perspective, lighting, and scale.
+  
+  **Brand scope (hard constraints)**
+  • Allowed items are **only**:
+    1) **Easyplant** self-watering potted plants (small/medium/large/huge) in authentic Easyplant pots.
+    2) **Mixtiles** wall-mounted photo tiles.
+  • Do not add, replace, stylize, or invent any other brands, props, furniture, or decor. No extra duplicates of the product.
+  
+  **Use the placement description (crucial)**
+  Use the following dense description to find the exact spot and correctly infer plane, orientation, and lighting:
+  "PRODUCT LOCATION DESCRIPTION: ${semanticLocationDescription}"
+  
+  **Use the inputs as ground truth**
+  • The product image may have black padding—treat padding as transparent and keep only the product.
+  • The scene image may have padding—ignore it and use the visible content.
+  
+  **Category-specific realism**
+  • If the product is a **Mixtiles tile**:
+    - Assume a square tile **~21.3 * 21.3 cm (8.4 * 8.4 in)** by default unless another Mixtiles size is explicitly stated.
+    - Place perfectly on the **WALL** plane: keep edges straight, corners sharp, and tile perfectly level to the horizon and parallel to nearby frames/lines.
+    - Cast a subtle, physically plausible wall shadow consistent with the scene's main light (direction, softness, and intensity).
+    - Respect existing wall objects, edges, and occluders (e.g., lamps, shelves). Do not deform the wall or overwrite textures.
+  
+  • If the product is an **Easyplant**:
+    - Scale pot and plant to realistic Easyplant dimensions. Defaults if unspecified:
+        • Small total height ≈ 23-41 cm; common pots ≈ 14-15 cm diameter, ≈ 12-13 cm height.
+        • Medium total height ≈ 28-66 cm; common pots ≈ 18-20 cm diameter, ≈ 14-20 cm height.
+        • Large total height ≈ 58-102 cm; Agatha pot ≈ 27.7 cm diameter * 25.1 cm height.
+        • Huge total height ≈ 102-142 cm; uses Agatha pot scale.
+    - Rest the pot stably on horizontal surfaces (TABLETOP/FLOOR/SHELF) at the marked spot; ensure flat contact (no floating).
+    - Keep Easyplant materials accurate: ceramic/matte for Amber/Monet/Era; propylene for Audrey/Agatha. No logos or text overlays.
+  
+  **Lighting, shading, and color**
+  • Match the scene's camera perspective and focal length. Align product orientation to the support plane's normal.
+  • Match white balance and color temperature; avoid introducing tints.
+  • Render **contact shadows** where product meets the surface (or soft wall shadow for tiles). Shadow direction, softness, and intensity must follow the scene's lighting cues stated in the description.
+  • Add subtle **reflections only** if the support material is glossy (stone, glass); otherwise none.
+  
+  **Occlusion and integration**
+  • Respect occlusions: if objects in the scene should partially cover the product (e.g., a chair arm, a plant leaf), composite accordingly.
+  • Do **not** alter or remove scene objects. No exposure, time-of-day, or style changes to the scene.
+  
+  **Scale discipline**
+  • Use nearby anchors (baseboards, desk edges, keyboards, picture frames, outlet plates) to set correct real-world scale for the product. Do not make a plant larger than a sofa or a tile thicker than a wall frame.
+  
+  **Once only**
+  • Place the product exactly **once** at the described location.
+  
+  **Output**
+  Return only the final composed image. Do not include any text or explanation.
+  `;
 
   const textPart = { text: prompt };
   
