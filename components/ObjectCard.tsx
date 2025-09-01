@@ -14,50 +14,78 @@ interface ObjectCardProps {
 
 const ObjectCard: React.FC<ObjectCardProps> = ({ product, isSelected, onClick }) => {
     const cardClasses = `
-        bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300
-        ${onClick ? 'hover:shadow-xl hover:scale-105' : ''}
-        ${isSelected ? 'border-2 border-blue-500 shadow-xl scale-105' : 'border border-zinc-200'}
+        bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-300 cursor-pointer
+        ${onClick ? 'hover:shadow-lg hover:scale-[1.02]' : ''}
+        ${isSelected ? 'ring-2 ring-pink-500 shadow-lg' : ''}
     `;
+
+    const renderTag = () => {
+        if (product.petFriendly) {
+            return (
+                <div className="absolute top-3 right-3 bg-white px-2 py-1 rounded-full text-xs font-medium text-gray-800 shadow-sm flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Pet Friendly
+                </div>
+            );
+        }
+        if (product.lightLevel) {
+            return (
+                <div className="absolute top-3 right-3 bg-white px-2 py-1 rounded-full text-xs font-medium text-gray-800 shadow-sm flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0V7a4 4 0 118 0v3zm-1 0a1 1 0 11-2 0v-3a1 1 0 112 0v3z" clipRule="evenodd" />
+                    </svg>
+                    {product.lightLevel}
+                </div>
+            );
+        }
+        return null;
+    };
 
     return (
         <div className={cardClasses} onClick={onClick}>
-            <div className="aspect-square w-full bg-white flex items-center justify-center p-4 relative">
+            {/* Product Image Area */}
+            <div className="aspect-square w-full bg-gray-50 flex items-center justify-center p-2 relative">
                 {product.isTile ? (
-                    // Mixtiles photos get enhanced tile frames
+                    // Mixtiles photos with simple frame
                     <div className="w-full h-full relative">
-                        {/* Photo frame with realistic styling */}
-                        <div className="w-full h-full border-4 border-amber-100 rounded-lg overflow-hidden shadow-lg bg-amber-50">
-                            <div className="w-full h-full border-2 border-amber-200 rounded-md overflow-hidden shadow-inner">
-                                <img 
-                                    src={product.imageUrl} 
-                                    alt={product.name} 
-                                    className="w-full h-full object-cover" 
-                                />
-                            </div>
-                        </div>
+                        <img 
+                            src={product.imageUrl} 
+                            alt={product.name} 
+                            className="w-full h-full object-cover rounded-lg" 
+                        />
                     </div>
                 ) : (
-                    // Plants get enhanced styling with natural elements
+                    // Plants with clean background
                     <div className="w-full h-full relative">
                         <img 
                             src={product.imageUrl} 
                             alt={product.name} 
                             className="w-full h-full object-contain object-center" 
-                            style={{
-                                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
-                                mixBlendMode: 'multiply'
-                            }}
                         />
-                        {/* Subtle plant background decoration */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-transparent opacity-30 rounded-lg pointer-events-none"></div>
                     </div>
                 )}
+                {renderTag()}
             </div>
-            <div className="p-2 text-center">
-                <h4 className="text-xs font-medium text-gray-700 truncate">{product.name}</h4>
-                <div className="text-xs text-gray-500 mt-1">
-                    {product.isTile ? 'Photo Tile' : 'Potted Plant'}
+
+            {/* Image Carousel Indicator (simplified) */}
+            <div className="flex justify-center py-1">
+                <div className="flex space-x-0.5">
+                    <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                    <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                    <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                    <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                    <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
                 </div>
+            </div>
+
+            {/* Product Information */}
+            <div className="px-3 pb-3">
+                <h4 className="text-xs font-medium text-gray-900 mb-1 truncate">{product.name}</h4>
+                {product.price && (
+                    <p className="text-xs text-gray-900 font-medium">{product.price}</p>
+                )}
             </div>
         </div>
     );

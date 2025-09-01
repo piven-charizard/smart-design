@@ -190,7 +190,11 @@ const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, la
               ref={imgRef}
               src={imageUrl} 
               alt={label || 'Uploaded Scene'} 
-              className="w-full h-full max-h-[600px] object-contain" 
+              className={`w-full h-full max-h-[600px] object-contain ${
+                imageUrl.includes('data:image') && imageUrl.includes('base64') 
+                  ? 'generated-image-3d plant-render-3d' 
+                  : ''
+              }`}
             />
             <div 
                 className="drop-orb" 

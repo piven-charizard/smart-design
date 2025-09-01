@@ -9,4 +9,7 @@ export interface Product {
   imageUrl: string;
   description?: string;
   isTile?: boolean;
+  price?: string;
+  lightLevel?: 'Low Light' | 'Medium Light' | 'Bright Light';
+  petFriendly?: boolean;
 }

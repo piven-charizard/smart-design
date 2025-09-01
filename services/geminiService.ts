@@ -252,145 +252,66 @@ const markImage = async (
 
 /**
  * Generates a composite image using a multi-modal AI model.
- * The model takes a product image, a scene image, and a text prompt
- * to generate a new image with the product placed in the scene.
+ * The model takes a product image, a scene image, and placement rules based on product type.
  * @param objectImage The file for the object to be placed.
- * @param objectDescription A text description of the object.
+ * @param isTile Whether this is a tile (goes on walls) or plant (goes on flat surfaces).
  * @param environmentImage The file for the background environment.
- * @param environmentDescription A text description of the environment.
  * @param dropPosition The relative x/y coordinates (0-100) where the product was dropped.
  * @returns A promise that resolves to an object containing the base64 data URL of the generated image and the debug image.
  */
 export const generateCompositeImage = async (
     objectImage: File, 
-    objectDescription: string,
+    isTile: boolean,
     environmentImage: File,
-    environmentDescription: string,
     dropPosition: { xPercent: number; yPercent: number; }
 ): Promise<{ finalImageUrl: string; debugImageUrl: string; finalPrompt: string; }> => {
-  console.log('Starting multi-step image generation process...');
+  console.log('Starting simplified image generation process...');
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
-  // Get original scene dimensions for final cropping and correct marker placement
+  // Get original scene dimensions for final cropping
   const { width: originalWidth, height: originalHeight } = await getImageDimensions(environmentImage);
   
   // Define standard dimension for model inputs
   const MAX_DIMENSION = 1024;
   
-  // STEP 1: Prepare images by resizing
-  console.log('Resizing product and scene images...');
+  // Resize images
+  console.log('Resizing images...');
   const resizedObjectImage = await resizeImage(objectImage, MAX_DIMENSION);
   const resizedEnvironmentImage = await resizeImage(environmentImage, MAX_DIMENSION);
 
-  // STEP 2: Mark the resized scene image for the description model and debug view
-  console.log('Marking scene image for analysis...');
-  // Pass original dimensions to correctly calculate marker position on the padded image
-  const markedResizedEnvironmentImage = await markImage(resizedEnvironmentImage, dropPosition, { originalWidth, originalHeight });
+  // Create debug image with marker
+  console.log('Creating debug image...');
+  const markedEnvironmentImage = await markImage(resizedEnvironmentImage, dropPosition, { originalWidth, originalHeight });
+  const debugImageUrl = await fileToDataUrl(markedEnvironmentImage);
 
-  // The debug image is now the marked one.
-  const debugImageUrl = await fileToDataUrl(markedResizedEnvironmentImage);
-
-
-  // STEP 3: Generate semantic location description with Gemini 2.5 Flash Lite using the MARKED image
-  console.log('Generating semantic location description with gemini-2.5-flash-lite...');
-  
-  const markedEnvironmentImagePart = await fileToPart(markedResizedEnvironmentImage);
-  const descriptionPrompt = `
-  You are an expert scene analyst. I will provide an image that has a red marker on it.
-  Describe *exactly what is at the marker* so another AI can place a product there realistically.
-  
-  Write 2-3 concise sentences that include:
-  • The support plane at the marker (WALL / FLOOR / TABLETOP / SHELF) and the surface material/finish (e.g., painted drywall, plaster, wood grain, stone, laminate, glass).
-  • Nearby anchors for scale/alignment (e.g., "10 cm below the shelf edge", "aligned with the picture frame's bottom edge", "on the wood desktop near the keyboard").
-  • Lighting direction and quality at the spot (e.g., "soft top-left light, mild falloff", "hard sunlight from right creating sharp shadow").
-  • Whether this spot is suitable for a **wall-mounted object** (Mixtiles tile) or a **resting object** (Easyplant pot) and why (vertical vs horizontal plane, clearance, visible edge, etc).
-  
-  Then add a short relative-to-image description (e.g., "About 15% in from the left and 20% up from the bottom of the image").
-  
-  Return only natural sentences (no lists or JSON). Be precise and do not invent objects that aren't visible.
-  `;
-  
-  let semanticLocationDescription = '';
-  try {
-    const descriptionResponse = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: { parts: [{ text: descriptionPrompt }, markedEnvironmentImagePart] }
-    });
-    semanticLocationDescription = descriptionResponse.text;
-    console.log('Generated description:', semanticLocationDescription);
-  } catch (error) {
-    console.error('Failed to generate semantic location description:', error);
-    // Fallback to a generic statement if the description generation fails
-    semanticLocationDescription = `at the specified location.`;
-  }
-
-  // STEP 4: Generate composite image using the CLEAN image and the description
-  console.log('Preparing to generate composite image...');
-  
-  const objectImagePart = await fileToPart(resizedObjectImage);
-  const cleanEnvironmentImagePart = await fileToPart(resizedEnvironmentImage); // IMPORTANT: Use clean image
+  // Generate simple prompt based on product type
+  const productType = isTile ? 'MIXTILES photo tile' : 'EASYPLANT pot';
+  const placementRule = isTile 
+    ? 'Place it on a wall surface (including glass walls in offices) - it\'s a flat wall decoration like a picture frame'
+    : 'Place it on a flat surface (table, floor, shelf) - it\'s a 3D object with depth';
   
   const prompt = `
-  **Role**
-  You are a visual composition expert. Take a 'product' image (first) and seamlessly integrate it into a 'scene' image (second), adjusting for perspective, lighting, and scale.
+  Place the ${productType} from the first image into the scene from the second image.
   
-  **Brand scope (hard constraints)**
-  • Allowed items are **only**:
-    1) **Easyplant** self-watering potted plants (small/medium/large/huge) in authentic Easyplant pots.
-    2) **Mixtiles** wall-mounted photo tiles.
-  • Do not add, replace, stylize, or invent any other brands, props, furniture, or decor. No extra duplicates of the product.
+  ${placementRule}
   
-  **Use the placement description (crucial)**
-  Use the following dense description to find the exact spot and correctly infer plane, orientation, and lighting:
-  "PRODUCT LOCATION DESCRIPTION: ${semanticLocationDescription}"
+  Rules:
+  - Make it look like the product was photographed in the scene
+  - Add realistic shadows where the product touches surfaces
+  - Don't change anything else in the scene
   
-  **Use the inputs as ground truth**
-  • The product image may have black padding—treat padding as transparent and keep only the product.
-  • The scene image may have padding—ignore it and use the visible content.
-  
-  **Category-specific realism**
-  • If the product is a **Mixtiles tile**:
-    - Assume a square tile **~21.3 * 21.3 cm (8.4 * 8.4 in)** by default unless another Mixtiles size is explicitly stated.
-    - Place perfectly on the **WALL** plane: keep edges straight, corners sharp, and tile perfectly level to the horizon and parallel to nearby frames/lines.
-    - Cast a subtle, physically plausible wall shadow consistent with the scene's main light (direction, softness, and intensity).
-    - Respect existing wall objects, edges, and occluders (e.g., lamps, shelves). Do not deform the wall or overwrite textures.
-  
-  • If the product is an **Easyplant**:
-    - Scale pot and plant to realistic Easyplant dimensions. Defaults if unspecified:
-        • Small total height ≈ 23-41 cm; common pots ≈ 14-15 cm diameter, ≈ 12-13 cm height.
-        • Medium total height ≈ 28-66 cm; common pots ≈ 18-20 cm diameter, ≈ 14-20 cm height.
-        • Large total height ≈ 58-102 cm; Agatha pot ≈ 27.7 cm diameter * 25.1 cm height.
-        • Huge total height ≈ 102-142 cm; uses Agatha pot scale.
-    - Rest the pot stably on horizontal surfaces (TABLETOP/FLOOR/SHELF) at the marked spot; ensure flat contact (no floating).
-    - Keep Easyplant materials accurate: ceramic/matte for Amber/Monet/Era; propylene for Audrey/Agatha. No logos or text overlays.
-  
-  **Lighting, shading, and color**
-  • Match the scene's camera perspective and focal length. Align product orientation to the support plane's normal.
-  • Match white balance and color temperature; avoid introducing tints.
-  • Render **contact shadows** where product meets the surface (or soft wall shadow for tiles). Shadow direction, softness, and intensity must follow the scene's lighting cues stated in the description.
-  • Add subtle **reflections only** if the support material is glossy (stone, glass); otherwise none.
-  
-  **Occlusion and integration**
-  • Respect occlusions: if objects in the scene should partially cover the product (e.g., a chair arm, a plant leaf), composite accordingly.
-  • Do **not** alter or remove scene objects. No exposure, time-of-day, or style changes to the scene.
-  
-  **Scale discipline**
-  • Use nearby anchors (baseboards, desk edges, keyboards, picture frames, outlet plates) to set correct real-world scale for the product. Do not make a plant larger than a sofa or a tile thicker than a wall frame.
-  
-  **Once only**
-  • Place the product exactly **once** at the described location.
-  
-  **Output**
-  Return only the final composed image. Do not include any text or explanation.
+  Return only the final image.
   `;
 
-  const textPart = { text: prompt };
+  console.log('Generating composite image...');
   
-  console.log('Sending images and augmented prompt...');
+  const objectImagePart = await fileToPart(resizedObjectImage);
+  const environmentImagePart = await fileToPart(resizedEnvironmentImage);
+  const textPart = { text: prompt };
   
   const response: GenerateContentResponse = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image-preview',
-    contents: { parts: [objectImagePart, cleanEnvironmentImagePart, textPart] }, // IMPORTANT: Use clean image
+    contents: { parts: [objectImagePart, environmentImagePart, textPart] },
   });
 
   console.log('Received response.');

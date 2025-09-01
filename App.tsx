@@ -16,12 +16,8 @@ import ProductSelector from './components/ProductSelector';
 import AddProductModal from './components/AddProductModal';
 import Spinner from './components/Spinner';
 import DebugModal from './components/DebugModal';
-import TouchGhost from './components/TouchGhost';
 
-// Pre-load a transparent image to use for hiding the default drag ghost.
-// This prevents a race condition on the first drag.
-const transparentDragImage = new Image();
-transparentDragImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
 
 // Helper to convert a data URL string to a File object
 const dataURLtoFile = (dataurl: string, filename: string): File => {
@@ -41,86 +37,174 @@ const dataURLtoFile = (dataurl: string, filename: string): File => {
 }
 
 const loadingMessages = [
-    "Analyzing your tiles and easyplants...",
-    "Exploring your space...",
-    "Finding the perfect spot with AI...",
-    "Designing your tiles and easyplants arrangement...",
-    "Creating a photorealistic preview...",
-    "Bringing your tiles and easyplants vision to life..."
+    "Analyzing your space for product placement...",
+    "Finding the perfect spots for your products...",
+    "Placing Easyplant pots and Mixtiles tiles...",
+    "Creating realistic product integration...",
+    "Adding shadows and lighting effects...",
+    "Finalizing your space design..."
+];
+
+const sceneLoadingMessages = [
+    "Processing your space image...",
+    "Analyzing room layout and surfaces...",
+    "Preparing for product placement...",
+    "Setting up your design canvas..."
 ];
 
 
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'home' | 'step1' | 'step2' | 'step3'>('home');
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [productImageFile, setProductImageFile] = useState<File | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [sceneImage, setSceneImage] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSceneLoading, setIsSceneLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
-  const [persistedOrbPosition, setPersistedOrbPosition] = useState<{x: number, y: number} | null>(null);
+  const [sceneLoadingMessageIndex, setSceneLoadingMessageIndex] = useState(0);
   const [debugImageUrl, setDebugImageUrl] = useState<string | null>(null);
   const [debugPrompt, setDebugPrompt] = useState<string | null>(null);
   const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
 
-  // State for touch drag & drop
-  const [isTouchDragging, setIsTouchDragging] = useState<boolean>(false);
-  const [touchGhostPosition, setTouchGhostPosition] = useState<{x: number, y: number} | null>(null);
-  const [isHoveringDropZone, setIsHoveringDropZone] = useState<boolean>(false);
-  const [touchOrbPosition, setTouchOrbPosition] = useState<{x: number, y: number} | null>(null);
-  const sceneImgRef = useRef<HTMLImageElement>(null);
-  
   const sceneImageUrl = sceneImage ? URL.createObjectURL(sceneImage) : null;
-  const productImageUrl = selectedProduct ? selectedProduct.imageUrl : null;
 
-  const handleProductSelect = useCallback(async (product: Product) => {
-    setError(null);
-    try {
-      // Fetch the product image and convert to File
-      const response = await fetch(product.imageUrl);
-      if (!response.ok) {
-        throw new Error('Failed to load product image');
+  const handleProductSelect = useCallback((product: Product) => {
+    setSelectedProducts(prev => {
+      const isSelected = prev.some(p => p.id === product.id);
+      if (isSelected) {
+        // Remove product if already selected
+        return prev.filter(p => p.id !== product.id);
+      } else {
+        // Add product if not selected
+        return [...prev, product];
       }
-      const blob = await response.blob();
-      const file = new File([blob], `${product.name.toLowerCase().replace(' ', '-')}.jpg`, { type: 'image/jpeg' });
-      
-      setProductImageFile(file);
-      setSelectedProduct(product);
-      setCurrentStep('step3');
-    } catch(err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      setError(`Could not load the product image. Details: ${errorMessage}`);
-      console.error(err);
-    }
+    });
   }, []);
 
-  const handleProductImageUpload = useCallback((file: File) => {
-    // useEffect will handle cleaning up the previous blob URL
-    setError(null);
-    try {
-        const imageUrl = URL.createObjectURL(file);
-        const product: Product = {
-            id: Date.now(),
-            name: file.name,
-            imageUrl: imageUrl,
-        };
-        setProductImageFile(file);
-        setSelectedProduct(product);
-        setCurrentStep('step3');
-        setIsAddProductModalOpen(false);
-    } catch(err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      setError(`Could not load the product image. Details: ${errorMessage}`);
-      console.error(err);
+  // Smart placement algorithm to avoid overlapping products
+  const generateSmartPosition = useCallback((isTile: boolean, placedPositions: { xPercent: number; yPercent: number; type: 'plant' | 'tile' }[]): { xPercent: number; yPercent: number } => {
+    const maxAttempts = 50;
+    const minDistance = 25; // Minimum distance between products (as percentage)
+    
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      let xPercent: number, yPercent: number;
+      
+      if (isTile) {
+        // Tiles go on walls - prefer upper areas and sides
+        const wallAreas = [
+          { xMin: 5, xMax: 25, yMin: 10, yMax: 40 },   // Left wall
+          { xMin: 75, xMax: 95, yMin: 10, yMax: 40 },  // Right wall
+          { xMin: 20, xMax: 80, yMin: 5, yMax: 25 },   // Top wall
+        ];
+        const area = wallAreas[Math.floor(Math.random() * wallAreas.length)];
+        xPercent = area.xMin + Math.random() * (area.xMax - area.xMin);
+        yPercent = area.yMin + Math.random() * (area.yMax - area.yMin);
+      } else {
+        // Plants go on flat surfaces - prefer lower areas and center
+        const surfaceAreas = [
+          { xMin: 15, xMax: 85, yMin: 60, yMax: 90 },  // Floor area
+          { xMin: 20, xMax: 80, yMin: 40, yMax: 70 },  // Table/shelf area
+        ];
+        const area = surfaceAreas[Math.floor(Math.random() * surfaceAreas.length)];
+        xPercent = area.xMin + Math.random() * (area.xMax - area.xMin);
+        yPercent = area.yMin + Math.random() * (area.yMax - area.yMin);
+      }
+      
+      // Check if this position conflicts with existing products
+      const conflicts = placedPositions.some(placed => {
+        const distance = Math.sqrt(
+          Math.pow(xPercent - placed.xPercent, 2) + 
+          Math.pow(yPercent - placed.yPercent, 2)
+        );
+        return distance < minDistance;
+      });
+      
+      if (!conflicts) {
+        return { xPercent, yPercent };
+      }
     }
+    
+    // If we can't find a non-conflicting position, return a fallback
+    // that's at least somewhat separated from existing products
+    const fallbackX = 20 + (placedPositions.length * 20) % 60;
+    const fallbackY = isTile ? 15 + (placedPositions.length * 10) % 25 : 70 + (placedPositions.length * 10) % 20;
+    return { xPercent: fallbackX, yPercent: fallbackY };
+  }, []);
+
+  const handleApplyProducts = useCallback(async () => {
+    if (selectedProducts.length === 0) {
+      setError('Please select at least one product to apply.');
+      return;
+    }
+
+    if (!sceneImage) {
+      setError('Please upload a scene image first.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      let currentSceneImage = sceneImage;
+      
+      // Smart placement algorithm
+      const placedPositions: { xPercent: number; yPercent: number; type: 'plant' | 'tile' }[] = [];
+      
+      // Process each selected product sequentially
+      for (const product of selectedProducts) {
+        // Fetch the product image and convert to File
+        const response = await fetch(product.imageUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to load product image for ${product.name}`);
+        }
+        const blob = await response.blob();
+        const productFile = new File([blob], `${product.name.toLowerCase().replace(' ', '-')}.jpg`, { type: 'image/jpeg' });
+        
+        // Generate smart position for the product
+        const position = generateSmartPosition(product.isTile || false, placedPositions);
+        placedPositions.push({ ...position, type: product.isTile ? 'tile' : 'plant' });
+        
+        const { finalImageUrl, debugImageUrl, finalPrompt } = await generateCompositeImage(
+          productFile, 
+          product.isTile || false,
+          currentSceneImage,
+          position
+        );
+        
+        // Update the scene with the new composite image
+        const newSceneFile = dataURLtoFile(finalImageUrl, `generated-scene-${Date.now()}.jpeg`);
+        currentSceneImage = newSceneFile;
+        setSceneImage(currentSceneImage);
+      }
+      
+      // Clear selected products after successful application
+      setSelectedProducts([]);
+      setCurrentStep('step3');
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      setError(`Failed to apply products. ${errorMessage}`);
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedProducts, sceneImage]);
+
+  const handleProductImageUpload = useCallback((file: File) => {
+    // This function is kept for compatibility with AddProductModal
+    // but the new workflow doesn't use it directly
+    setError(null);
+    console.log('Custom product upload:', file.name);
+    setIsAddProductModalOpen(false);
   }, []);
 
   const handleInstantStart = useCallback(async () => {
     setError(null);
     try {
       // Fetch the office scene
-      const sceneResponse = await fetch('/assets/office.jpg');
+      const sceneResponse = await fetch('/assets/office.png');
 
       if (!sceneResponse.ok) {
         throw new Error('Failed to load office scene');
@@ -128,7 +212,7 @@ const App: React.FC = () => {
 
       // Convert scene to File object
       const sceneBlob = await sceneResponse.blob();
-      const sceneFile = new File([sceneBlob], 'office.jpg', { type: 'image/jpeg' });
+      const sceneFile = new File([sceneBlob], 'office.png', { type: 'image/jpeg' });
 
       // Update state with the office scene
       setSceneImage(sceneFile);
@@ -140,84 +224,24 @@ const App: React.FC = () => {
     }
   }, []);
 
-    const handleProductDrop = useCallback(async (position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => {
-    if (!productImageFile || !selectedProduct) {
-      setError('An unexpected error occurred. Please try again.');
-      return;
-    }
-    
-    // If no scene image exists, try to load a default one
-    let currentSceneImage = sceneImage;
-    if (!currentSceneImage) {
-      try {
-        const sceneResponse = await fetch('/assets/office.jpg');
-        if (sceneResponse.ok) {
-          const sceneBlob = await sceneResponse.blob();
-          currentSceneImage = new File([sceneBlob], 'office.jpg', { type: 'image/jpeg' });
-          setSceneImage(currentSceneImage);
-        } else {
-          setError('Please upload a scene image first, or try the demo.');
-          return;
-        }
-      } catch (err) {
-        setError('Please upload a scene image first, or try the demo.');
-        return;
-      }
-    }
-    
-    setPersistedOrbPosition(position);
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { finalImageUrl, debugImageUrl, finalPrompt } = await generateCompositeImage(
-        productImageFile, 
-        selectedProduct.name,
-        currentSceneImage,
-        currentSceneImage.name,
-        relativePosition
-      );
-      setDebugImageUrl(debugImageUrl);
-      setDebugPrompt(finalPrompt);
-      const newSceneFile = dataURLtoFile(finalImageUrl, `generated-scene-${Date.now()}.jpeg`);
-      setSceneImage(newSceneFile);
 
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      setError(`Failed to generate the image. ${errorMessage}`);
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-      setPersistedOrbPosition(null);
-    }
-  }, [productImageFile, sceneImage, selectedProduct]);
 
 
   const handleReset = useCallback(() => {
     // Let useEffect handle URL revocation
     setCurrentStep('home');
-    setSelectedProduct(null);
-    setProductImageFile(null);
+    setSelectedProducts([]);
     setSceneImage(null);
     setError(null);
     setIsLoading(false);
-    setPersistedOrbPosition(null);
+    setIsSceneLoading(false);
     setDebugImageUrl(null);
     setDebugPrompt(null);
   }, []);
 
-  const handleChangeProduct = useCallback(() => {
-    // Let useEffect handle URL revocation
-    setSelectedProduct(null);
-    setProductImageFile(null);
-    setPersistedOrbPosition(null);
-    setDebugImageUrl(null);
-    setDebugPrompt(null);
-  }, []);
-  
   const handleChangeScene = useCallback(() => {
     setSceneImage(null);
     setCurrentStep('step1');
-    setPersistedOrbPosition(null);
     setDebugImageUrl(null);
     setDebugPrompt(null);
   }, []);
@@ -226,9 +250,22 @@ const App: React.FC = () => {
     setCurrentStep('step1');
   }, []);
 
-  const handleSceneUpload = useCallback((file: File) => {
-    setSceneImage(file);
-    setCurrentStep('step2');
+  const handleSceneUpload = useCallback(async (file: File) => {
+    setIsSceneLoading(true);
+    setError(null);
+    
+    try {
+      // Simulate processing time for better UX
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setSceneImage(file);
+      setCurrentStep('step2');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      setError(`Could not process scene image. Details: ${errorMessage}`);
+    } finally {
+      setIsSceneLoading(false);
+    }
   }, []);
 
   const handleAddOwnProductClick = useCallback(() => {
@@ -241,15 +278,18 @@ const App: React.FC = () => {
         if (sceneImageUrl) URL.revokeObjectURL(sceneImageUrl);
     };
   }, [sceneImageUrl]);
-  
+
+  // Scene loading message rotation
   useEffect(() => {
-    // Clean up the product's object URL when the component unmounts or the URL changes
-    return () => {
-        if (productImageUrl && productImageUrl.startsWith('blob:')) {
-            URL.revokeObjectURL(productImageUrl);
-        }
-    };
-  }, [productImageUrl]);
+    if (isSceneLoading) {
+      const interval = setInterval(() => {
+        setSceneLoadingMessageIndex(prev => (prev + 1) % sceneLoadingMessages.length);
+      }, 2000);
+      return () => clearInterval(interval);
+    }
+  }, [isSceneLoading]);
+  
+
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
@@ -264,94 +304,7 @@ const App: React.FC = () => {
     };
   }, [isLoading]);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!selectedProduct) return;
-    // Prevent page scroll
-    e.preventDefault();
-    setIsTouchDragging(true);
-    const touch = e.touches[0];
-    setTouchGhostPosition({ x: touch.clientX, y: touch.clientY });
-  };
 
-  useEffect(() => {
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isTouchDragging) return;
-      const touch = e.touches[0];
-      setTouchGhostPosition({ x: touch.clientX, y: touch.clientY });
-      
-      const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
-      const dropZone = elementUnderTouch?.closest<HTMLDivElement>('[data-dropzone-id="scene-uploader"]');
-
-      if (dropZone) {
-          const rect = dropZone.getBoundingClientRect();
-          setTouchOrbPosition({ x: touch.clientX - rect.left, y: touch.clientY - rect.top });
-          setIsHoveringDropZone(true);
-      } else {
-          setIsHoveringDropZone(false);
-          setTouchOrbPosition(null);
-      }
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (!isTouchDragging) return;
-      
-      const touch = e.changedTouches[0];
-      const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
-      const dropZone = elementUnderTouch?.closest<HTMLDivElement>('[data-dropzone-id="scene-uploader"]');
-
-      if (dropZone && sceneImgRef.current) {
-          const img = sceneImgRef.current;
-          const containerRect = dropZone.getBoundingClientRect();
-          const { naturalWidth, naturalHeight } = img;
-          const { width: containerWidth, height: containerHeight } = containerRect;
-
-          const imageAspectRatio = naturalWidth / naturalHeight;
-          const containerAspectRatio = containerWidth / containerHeight;
-
-          let renderedWidth, renderedHeight;
-          if (imageAspectRatio > containerAspectRatio) {
-              renderedWidth = containerWidth;
-              renderedHeight = containerWidth / imageAspectRatio;
-          } else {
-              renderedHeight = containerHeight;
-              renderedWidth = containerHeight * imageAspectRatio;
-          }
-          
-          const offsetX = (containerWidth - renderedWidth) / 2;
-          const offsetY = (containerHeight - renderedHeight) / 2;
-
-          const dropX = touch.clientX - containerRect.left;
-          const dropY = touch.clientY - containerRect.top;
-
-          const imageX = dropX - offsetX;
-          const imageY = dropY - offsetY;
-          
-          if (!(imageX < 0 || imageX > renderedWidth || imageY < 0 || imageY > renderedHeight)) {
-            const xPercent = (imageX / renderedWidth) * 100;
-            const yPercent = (imageY / renderedHeight) * 100;
-            
-            handleProductDrop({ x: dropX, y: dropY }, { xPercent, yPercent });
-          }
-      }
-
-      setIsTouchDragging(false);
-      setTouchGhostPosition(null);
-      setIsHoveringDropZone(false);
-      setTouchOrbPosition(null);
-    };
-
-    if (isTouchDragging) {
-      document.body.style.overflow = 'hidden'; // Prevent scrolling
-      window.addEventListener('touchmove', handleTouchMove, { passive: false });
-      window.addEventListener('touchend', handleTouchEnd, { passive: false });
-    }
-
-    return () => {
-      document.body.style.overflow = 'auto';
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [isTouchDragging, handleProductDrop]);
 
   const renderContent = () => {
     if (error) {
@@ -421,11 +374,21 @@ const App: React.FC = () => {
               Start by uploading a photo of your room or space where you want to place our products.
             </p>
             <div className="card p-6 max-w-md mx-auto">
-              <ImageUploader 
-                id="scene-uploader"
-                onFileSelect={handleSceneUpload}
-                imageUrl={sceneImageUrl}
-              />
+              {isSceneLoading ? (
+                <div className="min-h-[300px] flex items-center justify-center bg-gray-50 rounded-lg">
+                  <div className="text-center">
+                    <Spinner />
+                    <h3 className="text-xl font-semibold text-gray-900 mt-4 mb-2">Processing Your Space</h3>
+                    <p className="text-gray-600 transition-opacity duration-500">{sceneLoadingMessages[sceneLoadingMessageIndex]}</p>
+                  </div>
+                </div>
+              ) : (
+                <ImageUploader 
+                  id="scene-uploader"
+                  onFileSelect={handleSceneUpload}
+                  imageUrl={sceneImageUrl}
+                />
+              )}
             </div>
           </div>
           
@@ -445,7 +408,7 @@ const App: React.FC = () => {
     // Step 2: Choose Product
     if (currentStep === 'step2') {
       return (
-        <div className="w-full max-w-6xl mx-auto animate-fade-in">
+        <div className="w-full max-w-7xl mx-auto animate-fade-in">
           {/* Go Back Button */}
           <div className="text-left mb-6">
             <button
@@ -465,15 +428,59 @@ const App: React.FC = () => {
               <span className="text-pink-600 font-bold text-lg">2</span>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-3">Choose Your Product</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
-              Select from our curated collection of beautiful houseplants and Mixtiles photos to design your perfect space.
-            </p>
-            <ProductSelector 
-              products={ALL_PRODUCTS}
-              onSelect={handleProductSelect}
-              onAddOwnProductClick={handleAddOwnProductClick}
-            />
+                      <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
+            Select from our curated collection of Easyplant pots and Mixtiles photo tiles to design your perfect space.
+          </p>
           </div>
+          
+          {/* Products Grid */}
+          <div className="mb-8">
+            <div className={isLoading ? 'opacity-50 pointer-events-none' : ''}>
+              <ProductSelector 
+                products={ALL_PRODUCTS}
+                onSelect={handleProductSelect}
+                selectedProducts={selectedProducts}
+              />
+            </div>
+          </div>
+          
+          {/* Selected Products Summary and Apply Button */}
+          {selectedProducts.length > 0 && (
+            <div className="mb-8 text-center">
+              <div className="bg-pink-50 border border-pink-200 rounded-lg p-4 max-w-2xl mx-auto">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Selected Products ({selectedProducts.length})
+                </h3>
+                <div className="flex flex-wrap justify-center gap-2 mb-4">
+                  {selectedProducts.map(product => (
+                    <span 
+                      key={product.id}
+                      className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm font-medium"
+                    >
+                      {product.name}
+                    </span>
+                  ))}
+                </div>
+                              <button
+                onClick={handleApplyProducts}
+                disabled={isLoading}
+                className="bg-pink-500 text-white px-6 py-3 rounded-md font-medium hover:bg-pink-600 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto"
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Applying Products...
+                  </>
+                ) : (
+                  'Apply Selected Products'
+                )}
+              </button>
+              </div>
+            </div>
+          )}
           
           {/* Show the uploaded space */}
           <div className="mb-8">
@@ -521,65 +528,105 @@ const App: React.FC = () => {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Your Perfect Composition</h2>
           <p className="text-gray-600">
-            Choose a product and drag it onto your space to see how it looks
+            Select multiple Easyplant pots and Mixtiles tiles to apply to your space
           </p>
         </div>
         
-        {/* Products Carousel Above */}
+        {/* Products Grid Above */}
         <div className="mb-8">
-          <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">Choose Your Product</h3>
-          <ProductSelector 
-            products={ALL_PRODUCTS}
-            onSelect={handleProductSelect}
-            onAddOwnProductClick={handleAddOwnProductClick}
-          />
+          <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">Choose Your Products</h3>
+          <div className={isLoading ? 'opacity-50 pointer-events-none' : ''}>
+            <ProductSelector 
+              products={ALL_PRODUCTS}
+              onSelect={handleProductSelect}
+              selectedProducts={selectedProducts}
+            />
+          </div>
         </div>
+        
+        {/* Selected Products Summary and Apply Button */}
+        {selectedProducts.length > 0 && (
+          <div className="mb-8 text-center">
+            <div className="bg-pink-50 border border-pink-200 rounded-lg p-4 max-w-2xl mx-auto">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Selected Products ({selectedProducts.length})
+              </h3>
+              <div className="flex flex-wrap justify-center gap-2 mb-4">
+                {selectedProducts.map(product => (
+                  <span 
+                    key={product.id}
+                    className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm font-medium"
+                  >
+                    {product.name}
+                  </span>
+                ))}
+              </div>
+              <button
+                onClick={handleApplyProducts}
+                disabled={isLoading}
+                className="bg-pink-500 text-white px-6 py-3 rounded-md font-medium hover:bg-pink-600 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto"
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Applying Products...
+                  </>
+                ) : (
+                  'Apply Selected Products'
+                )}
+              </button>
+            </div>
+          </div>
+        )}
         
         {/* Space Below */}
         <div className="card p-6 max-w-8xl mx-auto relative">
           <h3 className="text-lg font-semibold text-center mb-3 text-gray-800">Your Space</h3>
-          <div className="flex-grow flex items-center justify-center">
-            <ImageUploader 
-                ref={sceneImgRef}
-                id="scene-uploader" 
-                onFileSelect={handleSceneUpload} 
-                imageUrl={sceneImageUrl}
-                isDropZone={!isLoading}
-                onProductDrop={handleProductDrop}
-                persistedOrbPosition={persistedOrbPosition}
-                showDebugButton={!!debugImageUrl && !isLoading}
-                onDebugClick={() => setIsDebugModalOpen(true)}
-                isTouchHovering={isHoveringDropZone}
-                touchOrbPosition={touchOrbPosition}
-            />
-          </div>
           
-          {/* Loading Overlay */}
-          {isLoading && (
-            <div className="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-lg flex items-center justify-center z-10 animate-fade-in">
+          {/* Loading State - Full Screen Overlay */}
+          {isLoading ? (
+            <div className="min-h-[400px] flex items-center justify-center bg-gray-50 rounded-lg">
               <div className="text-center">
                 <Spinner />
-                <h3 className="text-lg font-semibold text-gray-900 mt-4 mb-2">Creating Magic</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mt-4 mb-2">Applying Products</h3>
                 <p className="text-gray-600 transition-opacity duration-500">{loadingMessages[loadingMessageIndex]}</p>
+                <div className="mt-4 text-sm text-gray-500">
+                  Processing {selectedProducts.length} product{selectedProducts.length > 1 ? 's' : ''}...
+                </div>
               </div>
             </div>
+          ) : (
+            <>
+              <div className="flex-grow flex items-center justify-center">
+                <ImageUploader 
+                    id="scene-uploader" 
+                    onFileSelect={handleSceneUpload} 
+                    imageUrl={sceneImageUrl}
+                    showDebugButton={!!debugImageUrl}
+                    onDebugClick={() => setIsDebugModalOpen(true)}
+                />
+              </div>
+              
+              <div className="text-center mt-4">
+                {sceneImage && (
+                  <button
+                      onClick={handleChangeScene}
+                      className="text-sm text-pink-600 hover:text-pink-800 font-medium underline"
+                  >
+                      Change Scene
+                  </button>
+                )}
+              </div>
+            </>
           )}
-          
-          <div className="text-center mt-4">
-            {sceneImage && !isLoading && (
-              <button
-                  onClick={handleChangeScene}
-                  className="text-sm text-pink-600 hover:text-pink-800 font-medium underline"
-              >
-                  Change Scene
-              </button>
-            )}
-          </div>
         </div>
         
         {/* Status Section */}
         <div className="text-center mt-8">
-           {!isLoading && (
+           {!isLoading && selectedProducts.length === 0 && (
              <div className="bg-gray-50 rounded-xl p-6 max-w-lg mx-auto animate-fade-in">
                <div className="flex items-center justify-center mb-3">
                  <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center mr-3">
@@ -587,10 +634,10 @@ const App: React.FC = () => {
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3.5M7 21h10" />
                    </svg>
                  </div>
-                 <h3 className="text-lg font-semibold text-gray-900">Ready to Place</h3>
+                 <h3 className="text-lg font-semibold text-gray-900">Select Products</h3>
                </div>
                <p className="text-gray-600">
-                  Drag the product to your desired location or click directly on the scene
+                  Click on Easyplant pots and Mixtiles tiles above to select them, then use the Apply button to place them in your space
                </p>
              </div>
            )}
@@ -601,10 +648,6 @@ const App: React.FC = () => {
   
   return (
     <div className="bg-white text-zinc-800">
-      <TouchGhost 
-        imageUrl={isTouchDragging ? productImageUrl : null} 
-        position={touchGhostPosition}
-      />
       <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 p-4 md:p-8 flex items-center justify-center">

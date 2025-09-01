@@ -78,6 +78,21 @@
   .upload-area.active {
     @apply border-pink-500 bg-pink-50;
   }
+  
+  /* Product grid styles */
+  .product-grid {
+    @apply grid gap-6;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  
+  /* Product card hover effects */
+  .product-card {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  .product-card:hover {
+    @apply transform scale-[1.02] shadow-lg;
+  }
 }
 
 @layer utilities {
@@ -201,6 +216,69 @@
   }
 }
 
+/* Enhanced 3D effects for generated images */
+.generated-image-3d {
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.generated-image-3d:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 30px rgba(0, 0, 0, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Plant-specific 3D enhancements */
+.plant-render-3d {
+  filter: contrast(1.05) saturate(1.1);
+  box-shadow: 
+    0 6px 25px rgba(0, 0, 0, 0.12),
+    0 3px 10px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: perspective(1000px) rotateX(0deg);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.plant-render-3d:hover {
+  transform: perspective(1000px) rotateX(1deg) scale(1.01);
+  filter: contrast(1.08) saturate(1.15);
+}
+
+/* Enhanced depth for generated images */
+.generated-image-3d {
+  position: relative;
+  overflow: hidden;
+}
+
+.generated-image-3d::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 50%,
+    rgba(0, 0, 0, 0.05) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.generated-image-3d:hover::before {
+  opacity: 1;
+}
+
 /* Mobile optimizations */
 @media (max-width: 640px) {
   .mobile-friendly {
@@ -230,4 +308,14 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Carousel scrollbar hide */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
