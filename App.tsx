@@ -414,7 +414,7 @@ const App: React.FC = () => {
                   <div className="text-xs text-gray-500 mb-1">
                     <span className={`inline-block px-2 py-1 rounded-full ${
                       selectedPlant?.id === product.id 
-                        ? 'bg-green-100 text-green-800' 
+                        ? 'bg-pink-100 text-pink-800' 
                         : 'bg-blue-100 text-blue-800'
                     }`}>
                       {product.size?.toUpperCase()}
@@ -425,7 +425,7 @@ const App: React.FC = () => {
                     <div className="text-xs text-green-600 mt-1">🐾 Pet Friendly</div>
                   )}
                   {selectedPlant?.id === product.id && (
-                    <div className="text-xs text-green-600 mt-1 font-medium">✓ Selected</div>
+                    <div className="text-xs text-pink-600 mt-1 font-medium">✓ Selected</div>
                   )}
                 </div>
               ))}
