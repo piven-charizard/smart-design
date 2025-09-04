@@ -338,24 +338,13 @@ const App: React.FC = () => {
             Space Design Reinvented
           </h2>
           
-          {/* Piven Update Message */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 max-w-2xl mx-auto">
-            <div className="flex items-center justify-center mb-3">
-              <svg className="w-6 h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-lg font-semibold text-blue-900">Update in Progress</h3>
-            </div>
-            <p className="text-blue-800">
-              Piven is working on a new version of the Mixtiles Designer. We'll be back in a while with exciting new features!
-            </p>
-          </div>
+
           
           <button
-            disabled
-            className="bg-gray-400 text-white px-8 py-4 rounded-md text-lg font-medium cursor-not-allowed opacity-50"
+            onClick={handleStartDesign} 
+            className="bg-pink-500 text-white px-6 py-3 rounded-md font-medium hover:bg-pink-600 transition-all duration-200 shadow-sm hover:shadow-md"
           >
-            Design Your Space (Temporarily Unavailable)
+            Design Your Space 
           </button>
         </div>
       );
