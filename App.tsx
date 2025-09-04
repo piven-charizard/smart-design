@@ -127,15 +127,15 @@ const ALL_PRODUCTS = [
 
 const App: React.FC = () => {
   // Initialize currentStep from URL or default to 'home'
-  const getInitialStep = (): 'home' | 'step1' | 'step2' => {
+  const getInitialStep = (): 'home' | 'step1' | 'step2' | 'step3' => {
     const urlParams = new URLSearchParams(window.location.search);
     const step = urlParams.get('step');
-    return step === 'home' || step === 'step1' || step === 'step2'
+    return step === 'home' || step === 'step1' || step === 'step2' || step === 'step3'
       ? step
       : 'home';
   };
 
-  const [currentStep, setCurrentStep] = useState<'home' | 'step1' | 'step2'>(
+  const [currentStep, setCurrentStep] = useState<'home' | 'step1' | 'step2' | 'step3'>(
     getInitialStep()
   );
   const [sceneImage, setSceneImage] = useState<File | null>(null);
@@ -163,14 +163,14 @@ const App: React.FC = () => {
   const sceneImageUrl = sceneImage ? URL.createObjectURL(sceneImage) : null;
 
   // Helper function to update URL with current step
-  const updateStepInUrl = (step: 'home' | 'step1' | 'step2') => {
+  const updateStepInUrl = (step: 'home' | 'step1' | 'step2' | 'step3') => {
     const url = new URL(window.location.href);
     url.searchParams.set('step', step);
     window.history.replaceState({}, '', url.toString());
   };
 
   // Wrapper function to update both state and URL
-  const setCurrentStepWithUrl = (step: 'home' | 'step1' | 'step2') => {
+  const setCurrentStepWithUrl = (step: 'home' | 'step1' | 'step2' | 'step3') => {
     setCurrentStep(step);
     updateStepInUrl(step);
   };
@@ -238,6 +238,7 @@ const App: React.FC = () => {
       setFinalResult(finalImageUrl);
       setDebugPrompt(finalPrompt);
       setIsResultReady(true);
+      setCurrentStepWithUrl('step3');
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -766,6 +767,133 @@ const App: React.FC = () => {
                   Change Space
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Step 3: Final Result
+    if (currentStep === 'step3') {
+      return (
+        <div className="w-full max-w-4xl mx-auto animate-fade-in">
+          {/* Go Back Button */}
+          <div className="text-left mb-6">
+            <button
+              onClick={() => setCurrentStepWithUrl('step2')}
+              className="inline-flex items-center text-pink-600 hover:text-pink-800 font-medium transition-colors"
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Back to Step 2
+            </button>
+          </div>
+
+          {/* Step 3: Final Result */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-4">
+              <span className="text-pink-600 font-bold text-lg">3</span>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+              Your Design Result
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
+              Here's how your {selectedProduct?.name} looks in your space!
+            </p>
+          </div>
+
+          {/* Improvement Suggestions */}
+          <div className="mb-8">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 max-w-3xl mx-auto">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+                Help us improve the model
+              </h3>
+              <ul className="text-sm text-gray-700 space-y-2 text-left">
+                <li className="flex items-start">
+                  <span className="text-pink-500 mr-2">•</span>
+                  <span>Real sizes of the assets - provide actual dimensions for more accurate scaling</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-pink-500 mr-2">•</span>
+                  <span>Better quality of the images - higher resolution product photos for sharper results</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-pink-500 mr-2">•</span>
+                  <span>Time to play with it so who sees it can understand - more interaction time helps users better understand the tool's capabilities</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Final Result Image */}
+          <div className="mb-8">
+            <div className="card p-2 max-w-2xl mx-auto">
+              <img
+                src={finalResult || ''}
+                alt="Your design result"
+                className="w-full h-auto max-h-96 rounded-lg object-contain"
+              />
+            </div>
+          </div>
+
+          {/* Preview Model Notice */}
+          <div className="mb-8">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="w-5 h-5 text-blue-600 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3 text-left">
+                  <h4 className="text-sm font-medium text-blue-800 mb-1">
+                    Preview Model Notice
+                  </h4>
+                  <p className="text-sm text-blue-700">
+                    This is a preview model of nano bana. Preview models
+                    are not stable and will improve soon.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="text-center">
+            <div className="space-x-4">
+              <button
+                onClick={handleReset}
+                className="bg-pink-500 text-white px-6 py-3 rounded-md font-medium hover:bg-pink-600 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                Start Over
+              </button>
+              <button
+                onClick={() => setCurrentStepWithUrl('step2')}
+                className="bg-gray-500 text-white px-6 py-3 rounded-md font-medium hover:bg-gray-600 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                Try Different Product
+              </button>
             </div>
           </div>
         </div>
