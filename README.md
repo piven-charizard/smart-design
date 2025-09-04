@@ -10,8 +10,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1Tuc5dMKvboPh2UH4cQJoin
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js
 
 1. Install dependencies:
    `npm install`
@@ -22,6 +21,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1Tuc5dMKvboPh2UH4cQJoin
 ## Recent Improvements
 
 ### Enhanced Plant Realism (Latest Update)
+
 - **Improved AI Prompts**: Enhanced Gemini AI instructions to create more realistic 3D plant renderings
 - **Better Shadow Integration**: More detailed instructions for realistic contact shadows and ambient occlusion
 - **Depth Enhancement**: Added CSS 3D effects and perspective transforms for generated images

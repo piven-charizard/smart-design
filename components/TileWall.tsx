@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
+ */
 
 import React, { useState, useRef, useCallback } from 'react';
 import { Product } from './types';
@@ -26,41 +26,50 @@ const TileWall: React.FC<TileWallProps> = ({ products, onTileSelect }) => {
   const [dragTile, setDragTile] = useState<TilePosition | null>(null);
   const wallRef = useRef<HTMLDivElement>(null);
 
-  const handleTileDragStart = useCallback((e: React.DragEvent, product: Product) => {
-    e.dataTransfer.effectAllowed = 'copy';
-    setIsDragging(true);
-    
-    // Create a transparent drag image
-    const transparentImage = new Image();
-    transparentImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-    e.dataTransfer.setDragImage(transparentImage, 0, 0);
-  }, []);
+  const handleTileDragStart = useCallback(
+    (e: React.DragEvent, product: Product) => {
+      e.dataTransfer.effectAllowed = 'copy';
+      setIsDragging(true);
 
-  const handleWallDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    if (!wallRef.current) return;
-    
-    const rect = wallRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    // Find the product being dragged
-    const draggedProduct = products.find(p => p.id === parseInt(e.dataTransfer.getData('text/plain')));
-    if (!draggedProduct) return;
-    
-    const newTile: TilePosition = {
-      id: Date.now(),
-      product: draggedProduct,
-      x: x - 50, // Center the tile
-      y: y - 50,
-      rotation: Math.random() * 20 - 10, // Random rotation between -10 and 10 degrees
-      scale: 0.8 + Math.random() * 0.4, // Random scale between 0.8 and 1.2
-    };
-    
-    setPlacedTiles(prev => [...prev, newTile]);
-  }, [products]);
+      // Create a transparent drag image
+      const transparentImage = new Image();
+      transparentImage.src =
+        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      e.dataTransfer.setDragImage(transparentImage, 0, 0);
+    },
+    []
+  );
+
+  const handleWallDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+
+      if (!wallRef.current) return;
+
+      const rect = wallRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Find the product being dragged
+      const draggedProduct = products.find(
+        p => p.id === parseInt(e.dataTransfer.getData('text/plain'))
+      );
+      if (!draggedProduct) return;
+
+      const newTile: TilePosition = {
+        id: Date.now(),
+        product: draggedProduct,
+        x: x - 50, // Center the tile
+        y: y - 50,
+        rotation: Math.random() * 20 - 10, // Random rotation between -10 and 10 degrees
+        scale: 0.8 + Math.random() * 0.4, // Random scale between 0.8 and 1.2
+      };
+
+      setPlacedTiles(prev => [...prev, newTile]);
+    },
+    [products]
+  );
 
   const handleWallDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -74,13 +83,15 @@ const TileWall: React.FC<TileWallProps> = ({ products, onTileSelect }) => {
     <div className="w-full">
       {/* Product Selection */}
       <div className="mb-8">
-        <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">Choose Your Photos</h3>
+        <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">
+          Choose Your Photos
+        </h3>
         <div className="flex flex-wrap gap-4 justify-center">
           {products.map(product => (
             <div
               key={product.id}
               draggable
-              onDragStart={(e) => {
+              onDragStart={e => {
                 handleTileDragStart(e, product);
                 e.dataTransfer.setData('text/plain', product.id.toString());
               }}
@@ -103,7 +114,9 @@ const TileWall: React.FC<TileWallProps> = ({ products, onTileSelect }) => {
 
       {/* Tile Wall */}
       <div className="mb-8">
-        <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">Your Photo Wall</h3>
+        <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">
+          Your Photo Wall
+        </h3>
         <div
           ref={wallRef}
           onDrop={handleWallDrop}
@@ -151,8 +164,18 @@ const TileWall: React.FC<TileWallProps> = ({ products, onTileSelect }) => {
             <div className="absolute inset-0 bg-pink-50 border-2 border-pink-300 border-dashed rounded-lg flex items-center justify-center">
               <div className="text-center text-pink-600">
                 <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mb-2 mx-auto">
-                  <svg className="w-8 h-8 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  <svg
+                    className="w-8 h-8 text-pink-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    />
                   </svg>
                 </div>
                 <p className="font-medium">Drop photo here to add to wall</p>
@@ -160,9 +183,10 @@ const TileWall: React.FC<TileWallProps> = ({ products, onTileSelect }) => {
             </div>
           )}
         </div>
-        
+
         <p className="text-sm text-gray-500 text-center mt-2">
-          Drag photos from above to create your photo wall. Click the × to remove tiles.
+          Drag photos from above to create your photo wall. Click the × to
+          remove tiles.
         </p>
       </div>
     </div>

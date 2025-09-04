@@ -7,34 +7,41 @@
   html {
     scroll-behavior: smooth;
   }
-  
+
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+      Arial, sans-serif;
     line-height: 1.6;
     color: #2d3748;
     background-color: #ffffff;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-weight: 700;
     line-height: 1.2;
     color: #1a202c;
   }
-  
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   ::-webkit-scrollbar-track {
     background: #f1f5f9;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 4px;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
   }
@@ -45,51 +52,51 @@
   .btn-primary {
     @apply bg-pink-500 text-white px-6 py-3 rounded-md font-medium hover:bg-pink-600 transition-all duration-200 shadow-sm hover:shadow-md;
   }
-  
+
   .btn-secondary {
     @apply border border-gray-200 text-gray-600 px-6 py-3 rounded-md font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md;
   }
-  
+
   /* Card styles */
   .card {
     @apply bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200;
   }
-  
+
   /* Hero section styles */
   .hero-gradient {
     background: linear-gradient(135deg, #fefefe 0%, #f8fafc 100%);
   }
-  
+
   /* Feature highlight styles */
   .feature-highlight {
     @apply bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-6;
   }
-  
+
   /* Navigation styles */
   .nav-link {
     @apply text-gray-600 hover:text-gray-800 px-3 py-2 text-sm font-medium transition-colors duration-200;
   }
-  
+
   /* Image upload area styles */
   .upload-area {
     @apply border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors duration-200;
   }
-  
+
   .upload-area.active {
     @apply border-pink-500 bg-pink-50;
   }
-  
+
   /* Product grid styles */
   .product-grid {
     @apply grid gap-6;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
-  
+
   /* Product card hover effects */
   .product-card {
     @apply transition-all duration-300 ease-in-out;
   }
-  
+
   .product-card:hover {
     @apply transform scale-[1.02] shadow-lg;
   }
@@ -100,15 +107,15 @@
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in-out;
   }
-  
+
   .animate-slide-up {
     animation: slideUp 0.6s ease-out;
   }
-  
+
   .animate-bounce-soft {
     animation: bounceSoft 2s infinite;
   }
-  
+
   /* Custom animations */
   @keyframes fadeIn {
     from {
@@ -120,7 +127,7 @@
       transform: translateY(0);
     }
   }
-  
+
   @keyframes slideUp {
     from {
       opacity: 0;
@@ -131,58 +138,63 @@
       transform: translateY(0);
     }
   }
-  
+
   @keyframes bounceSoft {
-    0%, 100% {
+    0%,
+    100% {
       transform: translateY(0);
     }
     50% {
       transform: translateY(-5px);
     }
   }
-  
+
   /* Gradient utilities */
   .gradient-bg {
     background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
   }
-  
+
   .gradient-text {
     background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  
+
   /* Shadow utilities */
   .shadow-soft {
-    box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
+    box-shadow:
+      0 2px 15px -3px rgba(0, 0, 0, 0.07),
+      0 10px 20px -2px rgba(0, 0, 0, 0.04);
   }
-  
+
   .shadow-strong {
-    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow:
+      0 10px 25px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
-  
+
   /* Focus states */
   .focus-ring {
     @apply focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2;
   }
-  
+
   /* Glass morphism effect */
   .glass {
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.18);
   }
-  
+
   /* Hover effects */
   .hover-lift {
     transition: transform 0.2s ease-in-out;
   }
-  
+
   .hover-lift:hover {
     transform: translateY(-2px);
   }
-  
+
   /* Text utilities */
   .text-balance {
     text-wrap: balance;
@@ -194,11 +206,11 @@
   .dark-mode {
     @apply bg-gray-900 text-gray-100;
   }
-  
+
   .dark-mode .card {
     @apply bg-gray-800 border-gray-700;
   }
-  
+
   .dark-mode .btn-secondary {
     @apply border-gray-600 text-gray-300 hover:bg-gray-700;
   }
@@ -209,7 +221,7 @@
   .no-print {
     display: none !important;
   }
-  
+
   body {
     font-size: 12pt;
     line-height: 1.4;
@@ -218,7 +230,7 @@
 
 /* Enhanced 3D effects for generated images */
 .generated-image-3d {
-  box-shadow: 
+  box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.1),
     0 2px 8px rgba(0, 0, 0, 0.06),
     0 1px 3px rgba(0, 0, 0, 0.04);
@@ -228,7 +240,7 @@
 
 .generated-image-3d:hover {
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 8px 30px rgba(0, 0, 0, 0.15),
     0 4px 12px rgba(0, 0, 0, 0.08),
     0 2px 6px rgba(0, 0, 0, 0.05);
@@ -237,7 +249,7 @@
 /* Plant-specific 3D enhancements */
 .plant-render-3d {
   filter: contrast(1.05) saturate(1.1);
-  box-shadow: 
+  box-shadow:
     0 6px 25px rgba(0, 0, 0, 0.12),
     0 3px 10px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -284,7 +296,7 @@
   .mobile-friendly {
     @apply text-sm leading-relaxed;
   }
-  
+
   .mobile-padding {
     @apply px-4 py-2;
   }
@@ -295,7 +307,7 @@
   .high-contrast {
     @apply border-2 border-black;
   }
-  
+
   .high-contrast button {
     @apply border-2 border-black;
   }
