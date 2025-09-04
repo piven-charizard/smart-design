@@ -206,7 +206,8 @@ export const generateCompositeImage = async (
   productSize: string,
   productType: 'plant' | 'tile',
   environmentImage: File,
-  environmentDescription: string
+  environmentDescription: string,
+  pictureCount?: number
 ): Promise<{ finalImageUrl: string; finalPrompt: string }> => {
   console.log('Starting product placement image generation process...');
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
@@ -237,10 +238,12 @@ export const generateCompositeImage = async (
   // Generate placement instructions based on product type and size
   const getPlacementInstructions = (
     type: 'plant' | 'tile',
-    size: string
+    size: string,
+    pictureCount?: number
   ): string => {
     if (type === 'tile') {
-      return "Place the gallery wall (3-4 pictures arranged together) on a wall surface in the room. Look for empty wall spaces, above furniture like sofas or beds, in hallways, or on feature walls. Position it at eye level (typically 57-60 inches from the floor) and ensure it complements the room's existing decor and color scheme. The gallery wall should be properly sized and oriented for the wall space, maintaining the same shape and arrangement of the 3-4 pictures together.";
+      const pictureText = pictureCount ? `${pictureCount} pictures` : '3-4 pictures';
+      return `Place the gallery wall (${pictureText} arranged together) on a wall surface in the room. Look for empty wall spaces, above furniture like sofas or beds, in hallways, or on feature walls. Position it at eye level (typically 57-60 inches from the floor) and ensure it complements the room's existing decor and color scheme. The gallery wall should be properly sized and oriented for the wall space, maintaining the same shape and arrangement of the ${pictureText} together.`;
     }
 
     // Plant placement instructions
@@ -269,7 +272,7 @@ You are a visual composition expert specializing in product placement. Your task
     The second image provided. It may also be surrounded by black padding, which you should ignore.
 -   **Product Category:** ${productType}
 -   **Placement Instructions (Crucial):**
-    ${getPlacementInstructions(productType, productSize)}
+    ${getPlacementInstructions(productType, productSize, pictureCount)}
     -   You should only place the product once in the most logical location.
     -   Do not add any other items or objects - only place the product that was provided.
 -   **Final Image Requirements:**

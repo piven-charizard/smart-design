@@ -121,6 +121,7 @@ const ALL_PRODUCTS = [
     imageUrl: tile.imageUrl,
     size: 'gallery-wall' as const,
     type: 'tile' as const,
+    pictureCount: tile.pictureCount,
   })),
 ];
 
@@ -144,6 +145,7 @@ const App: React.FC = () => {
     imageUrl: string;
     size: string;
     type: 'plant' | 'tile';
+    pictureCount?: number;
   } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSceneLoading, setIsSceneLoading] = useState<boolean>(false);
@@ -181,6 +183,7 @@ const App: React.FC = () => {
       imageUrl: string;
       size: string;
       type: 'plant' | 'tile';
+      pictureCount?: number;
     }) => {
       setSelectedProduct(product);
     },
@@ -222,7 +225,8 @@ const App: React.FC = () => {
         selectedProduct.size,
         selectedProduct.type,
         sceneImage,
-        'A room interior scene'
+        'A room interior scene',
+        selectedProduct.pictureCount
       );
 
       // Update the scene with the new composite image

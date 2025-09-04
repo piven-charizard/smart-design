@@ -94,6 +94,7 @@ export const MIXTILES_PRODUCTS: Product[] = [
     description: 'Beautiful wall tile design for your space',
     isTile: true,
     price: 'From $29',
+    pictureCount: 3,
   },
   {
     id: 7,
@@ -102,6 +103,7 @@ export const MIXTILES_PRODUCTS: Product[] = [
     description: 'Elegant wall tile design for your space',
     isTile: true,
     price: 'From $29',
+    pictureCount: 4,
   },
 ];
 
