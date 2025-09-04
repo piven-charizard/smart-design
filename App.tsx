@@ -35,7 +35,7 @@ const dataURLtoFile = (dataurl: string, filename: string): File => {
 const loadingMessages = [
     "Analyzing your space for product placement...",
     "Finding the perfect spots for your products...",
-    "Placing Easyplant pots and Mixtiles tiles...",
+    "Placing plants and wall tiles...",
     "Creating realistic product integration...",
     "Adding shadows and lighting effects...",
     "Finalizing your space design..."
@@ -176,8 +176,8 @@ const App: React.FC = () => {
       return;
     }
 
-    if (!selectedPlant) {
-      setError('Please select a plant first.');
+    if (!selectedProduct) {
+      setError('Please select a product first.');
       return;
     }
 
@@ -185,18 +185,19 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      // Fetch the plant image and convert to File
-      const response = await fetch(selectedPlant.imageUrl);
+      // Fetch the product image and convert to File
+      const response = await fetch(selectedProduct.imageUrl);
       if (!response.ok) {
-        throw new Error(`Failed to load plant image for ${selectedPlant.name}`);
+        throw new Error(`Failed to load product image for ${selectedProduct.name}`);
       }
       const blob = await response.blob();
-      const plantFile = new File([blob], `${selectedPlant.name.toLowerCase().replace(/\s+/g, '-')}.jpg`, { type: 'image/jpeg' });
+      const productFile = new File([blob], `${selectedProduct.name.toLowerCase().replace(/\s+/g, '-')}.jpg`, { type: 'image/jpeg' });
       
-      // Generate composite image with the selected plant using size-based logical placement
+      // Generate composite image with the selected product using size-based logical placement
       const { finalImageUrl, finalPrompt } = await generateCompositeImage(
-        plantFile, 
-        selectedPlant.size,
+        productFile, 
+        selectedProduct.size,
+        selectedProduct.type,
         sceneImage,
         'A room interior scene'
       );
@@ -210,12 +211,12 @@ const App: React.FC = () => {
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      setError(`Failed to apply plant. ${errorMessage}`);
+      setError(`Failed to apply product. ${errorMessage}`);
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, [sceneImage, selectedPlant]);
+  }, [sceneImage, selectedProduct]);
 
 
   const handleInstantStart = useCallback(async (spaceId?: string) => {
@@ -259,17 +260,17 @@ const App: React.FC = () => {
     setDebugPrompt(null);
     setFinalResult(null);
     setIsResultReady(false);
-    setSelectedPlant(null);
+    setSelectedProduct(null);
   }, []);
 
   const handleTryAgain = useCallback(() => {
     setFinalResult(null);
     setIsResultReady(false);
-    setSelectedPlant(null);
+    setSelectedProduct(null);
     setError(null);
   }, []);
 
-  const handleTryDifferentPlant = useCallback(() => {
+  const handleTryDifferentProduct = useCallback(() => {
     setFinalResult(null);
     setIsResultReady(false);
     setError(null);
@@ -498,9 +499,9 @@ const App: React.FC = () => {
             <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-4">
               <span className="text-pink-600 font-bold text-lg">2</span>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Choose Your Plant</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Choose Your Product</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
-              Select a specific plant or let our AI choose the perfect one for your space.
+              Select a plant or wall tile for your space. You can only choose one item.
             </p>
           </div>
           
@@ -508,36 +509,36 @@ const App: React.FC = () => {
           {!isResultReady && (
             <>
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-center mb-6 text-gray-800">Available Plants</h3>
+                <h3 className="text-lg font-semibold text-center mb-6 text-gray-800">Available Products</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 max-w-5xl mx-auto">
-                  {PLANT_ASSETS.map(plant => (
+                  {ALL_PRODUCTS.map(product => (
                     <div 
-                      key={plant.id} 
-                      onClick={() => handlePlantSelect(plant)}
+                      key={product.id} 
+                      onClick={() => handleProductSelect(product)}
                       className={`bg-white rounded-lg shadow-sm border-2 p-4 text-center cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${
-                        selectedPlant?.id === plant.id 
+                        selectedProduct?.id === product.id 
                           ? 'border-pink-500 bg-pink-50' 
                           : 'border-gray-200 hover:border-pink-300'
                       }`}
                     >
                       <div className="aspect-square w-full bg-gray-50 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                         <img 
-                          src={plant.imageUrl} 
-                          alt={plant.name} 
+                          src={product.imageUrl} 
+                          alt={product.name} 
                           className="w-full h-full object-contain" 
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium text-gray-900 truncate flex-1 text-left">{plant.name}</h4>
+                        <h4 className="text-sm font-medium text-gray-900 truncate flex-1 text-left">{product.name}</h4>
                         <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ml-2 ${
-                          selectedPlant?.id === plant.id 
+                          selectedProduct?.id === product.id 
                             ? 'bg-pink-100 text-pink-800' 
                             : 'bg-gray-100 text-gray-700'
                         }`}>
-                          {plant.size.toUpperCase()}
+                          {product.type.toUpperCase()}
                         </span>
                       </div>
-                      {selectedPlant?.id === plant.id && (
+                      {selectedProduct?.id === product.id && (
                         <div className="text-xs text-pink-600 mt-2 font-medium">✓ Selected</div>
                       )}
                     </div>
@@ -545,14 +546,14 @@ const App: React.FC = () => {
                 </div>
                 <div className="text-center mt-6">
                   <p className="text-sm text-gray-500 mb-2">
-                    {selectedPlant 
-                      ? `Selected: ${selectedPlant.name} - AI will find the best location`
-                      : 'Click a plant to select it, or let AI choose the perfect one for your space'
+                    {selectedProduct 
+                      ? `Selected: ${selectedProduct.name} (${selectedProduct.type}) - AI will find the best location`
+                      : 'Click a product to select it. You can only choose one item.'
                     }
                   </p>
-                  {selectedPlant && (
+                  {selectedProduct && (
                     <button
-                      onClick={() => setSelectedPlant(null)}
+                      onClick={() => setSelectedProduct(null)}
                       className="text-xs text-gray-500 hover:text-gray-700 underline"
                     >
                       Clear Selection
@@ -561,7 +562,7 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Apply Plant Button */}
+              {/* Apply Product Button */}
               <div className="text-center mb-8">
                 <button
                   onClick={handleApplyProducts}
@@ -574,14 +575,14 @@ const App: React.FC = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Analyzing Space & Placing Plant...
+                      Analyzing Space & Placing Product...
                     </>
                   ) : (
                     <>
                       <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                       </svg>
-                      {selectedPlant ? `Place ${selectedPlant.name}` : 'Place Perfect Plant'}
+                      {selectedProduct ? `Place ${selectedProduct.name}` : 'Place Perfect Product'}
                     </>
                   )}
                 </button>
@@ -603,26 +604,33 @@ const App: React.FC = () => {
             </div>
             <div className="text-center mt-4">
               {isResultReady ? (
-                <div className="space-x-4">
-                  <button
-                    onClick={handleTryDifferentPlant}
-                    className="text-sm text-pink-600 hover:text-pink-800 font-medium underline"
-                  >
-                    Try Different Plant
-                  </button>
-                  <button
-                    onClick={handleTryAgain}
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium underline"
-                  >
-                    Try Again
-                  </button>
-                  <button
-                    onClick={handleReset}
-                    className="text-sm text-gray-600 hover:text-gray-800 font-medium underline"
-                  >
-                    Start Over
-                  </button>
-                </div>
+                <>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 max-w-2xl mx-auto">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-3 text-left">
+                        <h4 className="text-sm font-medium text-blue-800 mb-1">Preview Model Notice</h4>
+                        <p className="text-sm text-blue-700">
+                          This is a preview model of nano bana. Preview models are not stable and will improve soon.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-x-4">
+                  
+                  
+                    <button
+                      onClick={handleReset}
+                      className="text-sm text-gray-600 hover:text-gray-800 font-medium underline"
+                    >
+                      Start Over
+                    </button>
+                  </div>
+                </>
               ) : (
                 <button
                   onClick={handleChangeScene}

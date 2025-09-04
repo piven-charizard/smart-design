@@ -170,21 +170,23 @@ const fileToDataUrl = (file: File): Promise<string> => {
 
 /**
  * Generates a composite image using a multi-modal AI model.
- * The model takes a plant image and a scene image to generate a new image 
- * with the plant placed logically based on its size.
- * @param plantImage The file for the plant to be placed.
- * @param plantSize The size category of the plant (small, medium, large, huge).
+ * The model takes a product image (plant or tile) and a scene image to generate a new image 
+ * with the product placed logically based on its type and size.
+ * @param productImage The file for the product to be placed (plant or tile).
+ * @param productSize The size category of the product (small, medium, large, huge, tile).
+ * @param productType The type of product ('plant' or 'tile').
  * @param environmentImage The file for the background environment.
  * @param environmentDescription A text description of the environment.
  * @returns A promise that resolves to an object containing the base64 data URL of the generated image and the final prompt.
  */
 export const generateCompositeImage = async (
-    plantImage: File,
-    plantSize: string,
+    productImage: File,
+    productSize: string,
+    productType: 'plant' | 'tile',
     environmentImage: File,
     environmentDescription: string
 ): Promise<{ finalImageUrl: string; finalPrompt: string; }> => {
-    console.log('Starting plant placement image generation process...');
+    console.log('Starting product placement image generation process...');
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
     // Get original scene dimensions for final cropping
@@ -194,18 +196,23 @@ export const generateCompositeImage = async (
     const MAX_DIMENSION = 1024;
 
     // STEP 1: Prepare images by resizing
-    console.log('Resizing plant and scene images...');
-    const resizedPlantImage = await resizeImage(plantImage, MAX_DIMENSION);
+    console.log('Resizing product and scene images...');
+    const resizedProductImage = await resizeImage(productImage, MAX_DIMENSION);
     const resizedEnvironmentImage = await resizeImage(environmentImage, MAX_DIMENSION);
 
-    // STEP 2: Generate composite image with logical plant placement
-    console.log('Preparing to generate composite image with logical plant placement...');
+    // STEP 2: Generate composite image with logical product placement
+    console.log('Preparing to generate composite image with logical product placement...');
 
-    const plantImagePart = await fileToPart(resizedPlantImage);
+    const productImagePart = await fileToPart(resizedProductImage);
     const environmentImagePart = await fileToPart(resizedEnvironmentImage);
 
-    // Generate size-based placement instructions
-    const getPlacementInstructions = (size: string): string => {
+    // Generate placement instructions based on product type and size
+    const getPlacementInstructions = (type: 'plant' | 'tile', size: string): string => {
+        if (type === 'tile') {
+            return 'Place the wall tile picture on a wall surface in the room. Look for empty wall spaces, above furniture like sofas or beds, in hallways, or on feature walls. Position it at eye level (typically 57-60 inches from the floor) and ensure it complements the room\'s existing decor and color scheme. The tile should be properly sized and oriented for the wall space.';
+        }
+        
+        // Plant placement instructions
         switch (size.toLowerCase()) {
             case 'small':
                 return 'Place the plant on elevated surfaces like desks, tables, shelves, or countertops where there is reasonable space. Choose locations that make sense for small plants - near windows, on side tables, or on work surfaces.';
@@ -222,35 +229,36 @@ export const generateCompositeImage = async (
 
     const prompt = `
 **Role:**
-You are a visual composition expert specializing in plant placement. Your task is to take a plant image and seamlessly integrate it into a room scene, placing it logically based on the plant's size.
+You are a visual composition expert specializing in product placement. Your task is to take a product image (plant or wall tile) and seamlessly integrate it into a room scene, placing it logically based on the product's type and size.
 
 **Specifications:**
--   **Plant to add:**
-    The first image provided. It may be surrounded by black padding or background, which you should ignore and treat as transparent and only keep the plant.
+-   **Product to add:**
+    The first image provided. It may be surrounded by black padding or background, which you should ignore and treat as transparent and only keep the product.
 -   **Room scene to use:**
     The second image provided. It may also be surrounded by black padding, which you should ignore.
--   **Plant Size:** ${plantSize}
+-   **Product Type:** ${productType}
+-   **Product Size:** ${productSize}
 -   **Placement Instructions (Crucial):**
-    ${getPlacementInstructions(plantSize)}
-    -   You should only place the plant once in the most logical location.
-    -   Do not add any other items or objects - only place the plant that was provided.
+    ${getPlacementInstructions(productType, productSize)}
+    -   You should only place the product once in the most logical location.
+    -   Do not add any other items or objects - only place the product that was provided.
 -   **Final Image Requirements:**
     -   The output image's style, lighting, shadows, reflections, and camera perspective must exactly match the original scene.
-    -   Do not just copy and paste the plant. You must intelligently re-render it to fit the context. Adjust the plant's perspective and orientation to its most natural position, scale it appropriately, and ensure it casts realistic shadows according to the scene's light sources.
-    -   The plant must have proportional realism. A small plant cannot be bigger than a sofa, and a huge plant should be appropriately large for the space.
-    -   You must not return the original scene image without plant placement. The plant must always be present in the composite image.
-    -   Do not add any other items, decorations, or objects beyond the single plant provided.
+    -   Do not just copy and paste the product. You must intelligently re-render it to fit the context. Adjust the product's perspective and orientation to its most natural position, scale it appropriately, and ensure it casts realistic shadows according to the scene's light sources.
+    -   The product must have proportional realism. A small plant cannot be bigger than a sofa, and a wall tile should be appropriately sized for the wall space.
+    -   You must not return the original scene image without product placement. The product must always be present in the composite image.
+    -   Do not add any other items, decorations, or objects beyond the single product provided.
 
 The output should ONLY be the final, composed image. Do not add any text or explanation.
 `;
 
     const textPart = { text: prompt };
 
-    console.log('Sending images and plant placement prompt...');
+    console.log('Sending images and product placement prompt...');
 
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
-        contents: { parts: [plantImagePart, environmentImagePart, textPart] }
+        contents: { parts: [productImagePart, environmentImagePart, textPart] }
     });
 
     console.log('Received response.');
