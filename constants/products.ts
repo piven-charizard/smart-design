@@ -89,29 +89,28 @@ export const PLANT_PRODUCTS: Product[] = [
 export const MIXTILES_PRODUCTS: Product[] = [
   {
     id: 6,
-    name: "Paris, France",
-    imageUrl: "/assets/paris.png",
-    description: "Nighttime Paris street scene with illuminated Eiffel Tower",
+    name: "Wall Tile 1",
+    imageUrl: "/assets/pictures/wall-1.webp",
+    description: "Beautiful wall tile design for your space",
     isTile: true,
     price: "From $29"
   },
   {
     id: 7,
-    name: "Italy, Amalfi Coast",
-    imageUrl: "/assets/italy.png",
-    description: "Vintage palm trees and retro hotel sign",
+    name: "Wall Tile 2",
+    imageUrl: "/assets/pictures/wall-2.webp",
+    description: "Elegant wall tile design for your space",
     isTile: true,
     price: "From $29"
-  },
-  
+  }
 ];
 
 export const ALL_PRODUCTS: Product[] = [
   // Mix plants and tiles for better discoverability
   PLANT_PRODUCTS[0], // Anthurium Red
-  MIXTILES_PRODUCTS[0], // Paris, France
+  MIXTILES_PRODUCTS[0], // Wall Tile 1
   PLANT_PRODUCTS[1], // Parlor Palm
-  MIXTILES_PRODUCTS[1], // Italy, Amalfi Coast
+  MIXTILES_PRODUCTS[1], // Wall Tile 2
   PLANT_PRODUCTS[2], // Money Tree
   PLANT_PRODUCTS[3], // Snake Plant
   PLANT_PRODUCTS[4], // Pothos

@@ -8,7 +8,6 @@ import React from 'react';
 interface DebugModalProps {
   isOpen: boolean;
   onClose: () => void;
-  imageUrl: string | null;
   prompt: string | null;
 }
 
@@ -18,8 +17,8 @@ const CloseIcon = () => (
     </svg>
 );
 
-const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, imageUrl, prompt }) => {
-  if (!isOpen || !imageUrl) {
+const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, prompt }) => {
+  if (!isOpen) {
     return null;
   }
 
@@ -52,16 +51,10 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, imageUrl, prom
         </div>
         
         <div className="flex flex-col gap-4 overflow-y-auto">
-          <div>
-            <p className="text-zinc-600 mb-2">This is the image sent to the AI, with a red marker indicating the placement.</p>
-            <div className="rounded-lg overflow-hidden bg-zinc-100">
-                <img src={imageUrl} alt="Debug view of marked scene" className="w-full h-full object-contain" />
-            </div>
-          </div>
-          
           {prompt && (
             <div>
-                <h3 className="text-lg font-bold text-zinc-800 mb-2">Final Prompt to Image Model</h3>
+                <h3 className="text-lg font-bold text-zinc-800 mb-2">AI Prompt for Plant Placement</h3>
+                <p className="text-zinc-600 mb-4">This is the prompt sent to the AI model to generate the plant placement.</p>
                 <pre className="bg-zinc-100 text-zinc-700 p-4 rounded-lg text-xs whitespace-pre-wrap">
                     <code>{prompt}</code>
                 </pre>
