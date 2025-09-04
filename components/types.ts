@@ -12,4 +12,8 @@ export interface Product {
   price?: string;
   lightLevel?: 'Low Light' | 'Medium Light' | 'Bright Light';
   petFriendly?: boolean;
+  size?: 'small' | 'medium' | 'large' | 'huge';
+  height?: string; // e.g., "9-16 inches"
+  potWidth?: string; // e.g., "5.6 inches"
+  potHeight?: string; // e.g., "4.8 inches"
 }

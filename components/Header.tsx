@@ -19,18 +19,8 @@ const Header: React.FC = () => {
               alt="Mixtiles Designer" 
               className="h-8 w-8 rounded-lg object-cover mr-3"
             />
-            <span className="text-xl font-bold text-gray-900">Mixtiles Designer</span>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <a href="#" className="text-gray-600 hover:text-gray-900 font-medium">Products</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900 font-medium">Gallery</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900 font-medium">About</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900 font-medium">Contact</a>
-          </div>
-
-          {/* Mobile Menu Button */}
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}

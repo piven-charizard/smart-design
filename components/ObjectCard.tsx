@@ -81,10 +81,10 @@ const ObjectCard: React.FC<ObjectCardProps> = ({ product, isSelected, onClick })
             </div>
 
             {/* Product Information */}
-            <div className="px-3 pb-3">
-                <h4 className="text-xs font-medium text-gray-900 mb-1 truncate">{product.name}</h4>
+            <div className="px-4 pb-4">
+                <h4 className="text-sm font-medium text-gray-900 mb-2 truncate">{product.name}</h4>
                 {product.price && (
-                    <p className="text-xs text-gray-900 font-medium">{product.price}</p>
+                    <p className="text-sm text-gray-900 font-medium">{product.price}</p>
                 )}
             </div>
         </div>

@@ -21,7 +21,11 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({ products, onSelect, s
     const scroll = (direction: 'left' | 'right') => {
         if (!scrollContainerRef.current) return;
         
-        const scrollAmount = 300; // Scroll by 300px
+        // Calculate scroll amount based on card width + gap
+        const cardWidth = 256; // w-64 = 256px
+        const gap = 24; // gap-6 = 24px
+        const scrollAmount = cardWidth + gap;
+        
         const currentScroll = scrollContainerRef.current.scrollLeft;
         const newScroll = direction === 'left' 
             ? currentScroll - scrollAmount 
@@ -73,13 +77,13 @@ const ProductCarousel: React.FC<ProductCarouselProps> = ({ products, onSelect, s
             <div
                 ref={scrollContainerRef}
                 onScroll={handleScroll}
-                className="flex gap-4 overflow-x-auto scrollbar-hide py-2 px-2"
+                className="flex gap-6 overflow-x-auto scrollbar-hide py-4 px-4"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
                 {products.map(product => {
                     const isSelected = selectedProducts.some(p => p.id === product.id);
                     return (
-                        <div key={product.id} className="flex-shrink-0 w-32">
+                        <div key={product.id} className="flex-shrink-0 w-48 md:w-56 lg:w-64">
                             <ObjectCard
                                 product={product}
                                 isSelected={isSelected}

@@ -4,16 +4,12 @@
 */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { generateCompositeImage } from './services/geminiService';
+import { generateCompositeImage, analyzeSceneForPlantPlacement } from './services/geminiService';
 import { Product } from './components/types';
-import { PLANT_PRODUCTS, MIXTILES_PRODUCTS, ALL_PRODUCTS } from './constants/products';
+import { PLANT_PRODUCTS } from './constants/products';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ImageUploader from './components/ImageUploader';
-import ObjectCard from './components/ObjectCard';
-import ProductSelector from './components/ProductSelector';
-
-import AddProductModal from './components/AddProductModal';
 import Spinner from './components/Spinner';
 import DebugModal from './components/DebugModal';
 
@@ -55,8 +51,8 @@ const sceneLoadingMessages = [
 
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'home' | 'step1' | 'step2' | 'step3'>('home');
-  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [sceneImage, setSceneImage] = useState<File | null>(null);
+  const [selectedPlant, setSelectedPlant] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSceneLoading, setIsSceneLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,79 +61,40 @@ const App: React.FC = () => {
   const [debugImageUrl, setDebugImageUrl] = useState<string | null>(null);
   const [debugPrompt, setDebugPrompt] = useState<string | null>(null);
   const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
-  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
 
   const sceneImageUrl = sceneImage ? URL.createObjectURL(sceneImage) : null;
 
-  const handleProductSelect = useCallback((product: Product) => {
-    setSelectedProducts(prev => {
-      const isSelected = prev.some(p => p.id === product.id);
-      if (isSelected) {
-        // Remove product if already selected
-        return prev.filter(p => p.id !== product.id);
-      } else {
-        // Add product if not selected
-        return [...prev, product];
-      }
-    });
+  // Handle manual plant selection
+  const handlePlantSelect = useCallback((plant: Product) => {
+    setSelectedPlant(plant);
   }, []);
 
-  // Smart placement algorithm to avoid overlapping products
-  const generateSmartPosition = useCallback((isTile: boolean, placedPositions: { xPercent: number; yPercent: number; type: 'plant' | 'tile' }[]): { xPercent: number; yPercent: number } => {
-    const maxAttempts = 50;
-    const minDistance = 25; // Minimum distance between products (as percentage)
-    
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      let xPercent: number, yPercent: number;
+  // Auto-placement system that analyzes the scene and selects optimal plant size and location
+  const getOptimalPlantPlacement = useCallback(async (sceneImage: File) => {
+    try {
+      const analysis = await analyzeSceneForPlantPlacement(sceneImage);
       
-      if (isTile) {
-        // Tiles go on walls - prefer upper areas and sides
-        const wallAreas = [
-          { xMin: 5, xMax: 25, yMin: 10, yMax: 40 },   // Left wall
-          { xMin: 75, xMax: 95, yMin: 10, yMax: 40 },  // Right wall
-          { xMin: 20, xMax: 80, yMin: 5, yMax: 25 },   // Top wall
-        ];
-        const area = wallAreas[Math.floor(Math.random() * wallAreas.length)];
-        xPercent = area.xMin + Math.random() * (area.xMax - area.xMin);
-        yPercent = area.yMin + Math.random() * (area.yMax - area.yMin);
-      } else {
-        // Plants go on flat surfaces - prefer lower areas and center
-        const surfaceAreas = [
-          { xMin: 15, xMax: 85, yMin: 60, yMax: 90 },  // Floor area
-          { xMin: 20, xMax: 80, yMin: 40, yMax: 70 },  // Table/shelf area
-        ];
-        const area = surfaceAreas[Math.floor(Math.random() * surfaceAreas.length)];
-        xPercent = area.xMin + Math.random() * (area.xMax - area.xMin);
-        yPercent = area.yMin + Math.random() * (area.yMax - area.yMin);
-      }
+      // Find a plant that matches the recommended size
+      const availablePlants = PLANT_PRODUCTS.filter(plant => plant.size === analysis.recommendedSize);
+      const selectedPlant = availablePlants[Math.floor(Math.random() * availablePlants.length)] || PLANT_PRODUCTS[0];
       
-      // Check if this position conflicts with existing products
-      const conflicts = placedPositions.some(placed => {
-        const distance = Math.sqrt(
-          Math.pow(xPercent - placed.xPercent, 2) + 
-          Math.pow(yPercent - placed.yPercent, 2)
-        );
-        return distance < minDistance;
-      });
-      
-      if (!conflicts) {
-        return { xPercent, yPercent };
-      }
+      return {
+        plant: selectedPlant,
+        position: analysis.placementPosition,
+        reasoning: analysis.reasoning
+      };
+    } catch (error) {
+      console.error('Failed to analyze scene for plant placement:', error);
+      // Fallback to medium plant in center
+      return {
+        plant: PLANT_PRODUCTS.find(p => p.size === 'medium') || PLANT_PRODUCTS[0],
+        position: { xPercent: 50, yPercent: 70 },
+        reasoning: 'Analysis failed, using default placement'
+      };
     }
-    
-    // If we can't find a non-conflicting position, return a fallback
-    // that's at least somewhat separated from existing products
-    const fallbackX = 20 + (placedPositions.length * 20) % 60;
-    const fallbackY = isTile ? 15 + (placedPositions.length * 10) % 25 : 70 + (placedPositions.length * 10) % 20;
-    return { xPercent: fallbackX, yPercent: fallbackY };
   }, []);
 
   const handleApplyProducts = useCallback(async () => {
-    if (selectedProducts.length === 0) {
-      setError('Please select at least one product to apply.');
-      return;
-    }
-
     if (!sceneImage) {
       setError('Please upload a scene image first.');
       return;
@@ -145,60 +102,60 @@ const App: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      let currentSceneImage = sceneImage;
-      
-      // Smart placement algorithm
-      const placedPositions: { xPercent: number; yPercent: number; type: 'plant' | 'tile' }[] = [];
-      
-      // Process each selected product sequentially
-      for (const product of selectedProducts) {
-        // Fetch the product image and convert to File
-        const response = await fetch(product.imageUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to load product image for ${product.name}`);
-        }
-        const blob = await response.blob();
-        const productFile = new File([blob], `${product.name.toLowerCase().replace(' ', '-')}.jpg`, { type: 'image/jpeg' });
-        
-        // Generate smart position for the product
-        const position = generateSmartPosition(product.isTile || false, placedPositions);
-        placedPositions.push({ ...position, type: product.isTile ? 'tile' : 'plant' });
-        
-        const { finalImageUrl, debugImageUrl, finalPrompt } = await generateCompositeImage(
-          productFile, 
-          product.isTile || false,
-          currentSceneImage,
-          position
-        );
-        
-        // Update the scene with the new composite image
-        const newSceneFile = dataURLtoFile(finalImageUrl, `generated-scene-${Date.now()}.jpeg`);
-        currentSceneImage = newSceneFile;
-        setSceneImage(currentSceneImage);
+      let plant: Product;
+      let position: { xPercent: number; yPercent: number };
+      let reasoning: string;
+
+      if (selectedPlant) {
+        // Use manually selected plant
+        plant = selectedPlant;
+        // Get AI-analyzed position for the selected plant
+        const analysis = await analyzeSceneForPlantPlacement(sceneImage);
+        position = analysis.placementPosition;
+        reasoning = `Using selected ${plant.name} - ${analysis.reasoning}`;
+        console.log(`Using selected plant: ${plant.name} (${plant.size}) - ${reasoning}`);
+      } else {
+        // Use AI auto-selection
+        const analysis = await getOptimalPlantPlacement(sceneImage);
+        plant = analysis.plant;
+        position = analysis.position;
+        reasoning = analysis.reasoning;
+        console.log(`AI selected: ${plant.name} (${plant.size}) - ${reasoning}`);
       }
       
-      // Clear selected products after successful application
-      setSelectedProducts([]);
+      // Fetch the plant image and convert to File
+      const response = await fetch(plant.imageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to load plant image for ${plant.name}`);
+      }
+      const blob = await response.blob();
+      const plantFile = new File([blob], `${plant.name.toLowerCase().replace(/\s+/g, '-')}.jpg`, { type: 'image/jpeg' });
+      
+      // Generate composite image with the selected plant
+      const { finalImageUrl, debugImageUrl, finalPrompt } = await generateCompositeImage(
+        plantFile, 
+        `A ${plant.size} ${plant.name} plant in a ${plant.potWidth} x ${plant.potHeight} pot, ${plant.height} tall`,
+        sceneImage,
+        'A room interior scene',
+        position
+      );
+      
+      // Update the scene with the new composite image
+      const newSceneFile = dataURLtoFile(finalImageUrl, `generated-scene-${Date.now()}.jpeg`);
+      setSceneImage(newSceneFile);
       setCurrentStep('step3');
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      setError(`Failed to apply products. ${errorMessage}`);
+      setError(`Failed to apply plant. ${errorMessage}`);
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedProducts, sceneImage]);
+  }, [sceneImage, selectedPlant, getOptimalPlantPlacement]);
 
-  const handleProductImageUpload = useCallback((file: File) => {
-    // This function is kept for compatibility with AddProductModal
-    // but the new workflow doesn't use it directly
-    setError(null);
-    console.log('Custom product upload:', file.name);
-    setIsAddProductModalOpen(false);
-  }, []);
 
   const handleInstantStart = useCallback(async () => {
     setError(null);
@@ -230,7 +187,6 @@ const App: React.FC = () => {
   const handleReset = useCallback(() => {
     // Let useEffect handle URL revocation
     setCurrentStep('home');
-    setSelectedProducts([]);
     setSceneImage(null);
     setError(null);
     setIsLoading(false);
@@ -268,9 +224,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleAddOwnProductClick = useCallback(() => {
-    setIsAddProductModalOpen(true);
-  }, []);
 
   useEffect(() => {
     // Clean up the scene's object URL when the component unmounts or the URL changes
@@ -430,60 +383,71 @@ const App: React.FC = () => {
             <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-4">
               <span className="text-pink-600 font-bold text-lg">2</span>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Choose Your Product</h2>
-                      <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
-            Select from our curated collection of Easyplant pots and Mixtiles photo tiles to design your perfect space.
-          </p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Choose Your Plant</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
+              Select a specific plant or let our AI choose the perfect one for your space.
+            </p>
           </div>
           
-          {/* Products Grid */}
+          {/* Available Plants Showcase */}
           <div className="mb-8">
-            <div className={isLoading ? 'opacity-50 pointer-events-none' : ''}>
-              <ProductSelector 
-                products={ALL_PRODUCTS}
-                onSelect={handleProductSelect}
-                selectedProducts={selectedProducts}
-              />
+            <h3 className="text-lg font-semibold text-center mb-6 text-gray-800">Available Plants</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 max-w-6xl mx-auto">
+              {PLANT_PRODUCTS.map(product => (
+                <div 
+                  key={product.id} 
+                  onClick={() => handlePlantSelect(product)}
+                  className={`bg-white rounded-lg shadow-sm border-2 p-3 text-center cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${
+                    selectedPlant?.id === product.id 
+                      ? 'border-pink-500 bg-pink-50' 
+                      : 'border-gray-200 hover:border-pink-300'
+                  }`}
+                >
+                  <div className="aspect-square w-full bg-gray-50 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                    <img 
+                      src={product.imageUrl} 
+                      alt={product.name} 
+                      className="w-full h-full object-contain" 
+                    />
+                  </div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-1 truncate">{product.name}</h4>
+                  <div className="text-xs text-gray-500 mb-1">
+                    <span className={`inline-block px-2 py-1 rounded-full ${
+                      selectedPlant?.id === product.id 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {product.size?.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600">{product.height}</p>
+                  {product.petFriendly && (
+                    <div className="text-xs text-green-600 mt-1">🐾 Pet Friendly</div>
+                  )}
+                  {selectedPlant?.id === product.id && (
+                    <div className="text-xs text-green-600 mt-1 font-medium">✓ Selected</div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="text-center mt-4">
+              <p className="text-sm text-gray-500 mb-2">
+                {selectedPlant 
+                  ? `Selected: ${selectedPlant.name} - AI will find the best location`
+                  : 'Click a plant to select it, or let AI choose the perfect one for your space'
+                }
+              </p>
+              {selectedPlant && (
+                <button
+                  onClick={() => setSelectedPlant(null)}
+                  className="text-xs text-gray-500 hover:text-gray-700 underline"
+                >
+                  Clear Selection
+                </button>
+              )}
             </div>
           </div>
           
-          {/* Selected Products Summary and Apply Button */}
-          {selectedProducts.length > 0 && (
-            <div className="mb-8 text-center">
-              <div className="bg-pink-50 border border-pink-200 rounded-lg p-4 max-w-2xl mx-auto">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Selected Products ({selectedProducts.length})
-                </h3>
-                <div className="flex flex-wrap justify-center gap-2 mb-4">
-                  {selectedProducts.map(product => (
-                    <span 
-                      key={product.id}
-                      className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm font-medium"
-                    >
-                      {product.name}
-                    </span>
-                  ))}
-                </div>
-                              <button
-                onClick={handleApplyProducts}
-                disabled={isLoading}
-                className="bg-pink-500 text-white px-6 py-3 rounded-md font-medium hover:bg-pink-600 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto"
-              >
-                {isLoading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Applying Products...
-                  </>
-                ) : (
-                  'Apply Selected Products'
-                )}
-              </button>
-              </div>
-            </div>
-          )}
           
           {/* Show the uploaded space */}
           <div className="mb-8">
@@ -503,6 +467,32 @@ const App: React.FC = () => {
                 Change Space
               </button>
             </div>
+          </div>
+
+          {/* Apply Plant Button */}
+          <div className="text-center mt-8">
+            <button
+              onClick={handleApplyProducts}
+              disabled={isLoading}
+              className="bg-pink-500 text-white px-8 py-4 rounded-lg font-medium hover:bg-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto text-lg"
+            >
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Analyzing Space & Placing Plant...
+                </>
+              ) : (
+                <>
+                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  {selectedPlant ? `Place ${selectedPlant.name}` : 'Place Perfect Plant'}
+                </>
+              )}
+            </button>
           </div>
         </div>
       );
@@ -535,55 +525,45 @@ const App: React.FC = () => {
           </p>
         </div>
         
-        {/* Products Grid Above */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">Choose Your Products</h3>
-          <div className={isLoading ? 'opacity-50 pointer-events-none' : ''}>
-            <ProductSelector 
-              products={ALL_PRODUCTS}
-              onSelect={handleProductSelect}
-              selectedProducts={selectedProducts}
-            />
+        {/* Auto Plant Placement Section */}
+        <div className="mb-8 text-center">
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6 max-w-2xl mx-auto">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">Smart Plant Placement</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Our AI will analyze your space and automatically select the perfect plant size and location. 
+              It will avoid screens, doorways, and choose the most appropriate spot for your space.
+            </p>
+            <button
+              onClick={handleApplyProducts}
+              disabled={isLoading}
+              className="bg-pink-500 text-white px-8 py-4 rounded-lg font-medium hover:bg-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto text-lg"
+            >
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Analyzing Space & Placing Plant...
+                </>
+              ) : (
+                <>
+                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+{selectedPlant ? `Place ${selectedPlant.name}` : 'Place Perfect Plant'}
+                </>
+              )}
+            </button>
           </div>
         </div>
-        
-        {/* Selected Products Summary and Apply Button */}
-        {selectedProducts.length > 0 && (
-          <div className="mb-8 text-center">
-            <div className="bg-pink-50 border border-pink-200 rounded-lg p-4 max-w-2xl mx-auto">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Selected Products ({selectedProducts.length})
-              </h3>
-              <div className="flex flex-wrap justify-center gap-2 mb-4">
-                {selectedProducts.map(product => (
-                  <span 
-                    key={product.id}
-                    className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm font-medium"
-                  >
-                    {product.name}
-                  </span>
-                ))}
-              </div>
-              <button
-                onClick={handleApplyProducts}
-                disabled={isLoading}
-                className="bg-pink-500 text-white px-6 py-3 rounded-md font-medium hover:bg-pink-600 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto"
-              >
-                {isLoading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Applying Products...
-                  </>
-                ) : (
-                  'Apply Selected Products'
-                )}
-              </button>
-            </div>
-          </div>
-        )}
         
         {/* Space Below */}
         <div className="card p-6 max-w-8xl mx-auto relative">
@@ -597,7 +577,7 @@ const App: React.FC = () => {
                 <h3 className="text-xl font-semibold text-gray-900 mt-4 mb-2">Applying Products</h3>
                 <p className="text-gray-600 transition-opacity duration-500">{loadingMessages[loadingMessageIndex]}</p>
                 <div className="mt-4 text-sm text-gray-500">
-                  Processing {selectedProducts.length} product{selectedProducts.length > 1 ? 's' : ''}...
+                  Analyzing space and placing plant...
                 </div>
               </div>
             </div>
@@ -627,24 +607,6 @@ const App: React.FC = () => {
           )}
         </div>
         
-        {/* Status Section */}
-        <div className="text-center mt-8">
-           {!isLoading && selectedProducts.length === 0 && (
-             <div className="bg-gray-50 rounded-xl p-6 max-w-lg mx-auto animate-fade-in">
-               <div className="flex items-center justify-center mb-3">
-                 <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center mr-3">
-                   <svg className="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3.5M7 21h10" />
-                   </svg>
-                 </div>
-                 <h3 className="text-lg font-semibold text-gray-900">Select Products</h3>
-               </div>
-               <p className="text-gray-600">
-                  Click on Easyplant pots and Mixtiles tiles above to select them, then use the Apply button to place them in your space
-               </p>
-             </div>
-           )}
-        </div>
       </div>
     );
   };
@@ -665,11 +627,6 @@ const App: React.FC = () => {
         onClose={() => setIsDebugModalOpen(false)}
         imageUrl={debugImageUrl}
         prompt={debugPrompt}
-      />
-      <AddProductModal 
-        isOpen={isAddProductModalOpen} 
-        onClose={() => setIsAddProductModalOpen(false)}
-        onFileSelect={handleProductImageUpload}
       />
     </div>
   );
