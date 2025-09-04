@@ -34,7 +34,7 @@ const dataURLtoFile = (dataurl: string, filename: string): File => {
 const loadingMessages = [
   'Analyzing your space for product placement...',
   'Finding the perfect spots for your products...',
-  'Placing plants and wall tiles...',
+  'Placing plants and gallery walls...',
   'Creating realistic product integration...',
   'Adding shadows and lighting effects...',
   'Finalizing your space design...',
@@ -119,7 +119,7 @@ const ALL_PRODUCTS = [
     id: tile.id.toString(),
     name: tile.name,
     imageUrl: tile.imageUrl,
-    size: 'tile' as const,
+    size: 'gallery-wall' as const,
     type: 'tile' as const,
   })),
 ];
@@ -575,7 +575,7 @@ const App: React.FC = () => {
               Choose Your Product
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
-              Select a plant or wall tile for your space. You can only choose
+              Select a plant or gallery wall for your space. You can only choose
               one item.
             </p>
           </div>
@@ -616,7 +616,7 @@ const App: React.FC = () => {
                               : 'bg-gray-100 text-gray-700'
                           }`}
                         >
-                          {product.type.toUpperCase()}
+                          {product.type === 'plant' ? product.size?.toUpperCase() : 'GALLERY WALLS'}
                         </span>
                       </div>
                       {selectedProduct?.id === product.id && (

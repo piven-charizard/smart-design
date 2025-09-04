@@ -192,10 +192,10 @@ const fileToDataUrl = (file: File): Promise<string> => {
 
 /**
  * Generates a composite image using a multi-modal AI model.
- * The model takes a product image (plant or tile) and a scene image to generate a new image
- * with the product placed logically based on its type and size.
- * @param productImage The file for the product to be placed (plant or tile).
- * @param productSize The size category of the product (small, medium, large, huge, tile).
+ * The model takes a product image (plant or gallery wall) and a scene image to generate a new image
+ * with the product placed logically based on its category.
+ * @param productImage The file for the product to be placed (plant or gallery wall).
+ * @param productSize The size category of the product (small, medium, large, huge, gallery-wall).
  * @param productType The type of product ('plant' or 'tile').
  * @param environmentImage The file for the background environment.
  * @param environmentDescription A text description of the environment.
@@ -240,7 +240,7 @@ export const generateCompositeImage = async (
     size: string
   ): string => {
     if (type === 'tile') {
-      return "Place the wall tile picture on a wall surface in the room. Look for empty wall spaces, above furniture like sofas or beds, in hallways, or on feature walls. Position it at eye level (typically 57-60 inches from the floor) and ensure it complements the room's existing decor and color scheme. The tile should be properly sized and oriented for the wall space.";
+      return "Place the gallery wall (3-4 pictures arranged together) on a wall surface in the room. Look for empty wall spaces, above furniture like sofas or beds, in hallways, or on feature walls. Position it at eye level (typically 57-60 inches from the floor) and ensure it complements the room's existing decor and color scheme. The gallery wall should be properly sized and oriented for the wall space, maintaining the same shape and arrangement of the 3-4 pictures together.";
     }
 
     // Plant placement instructions
@@ -260,15 +260,14 @@ export const generateCompositeImage = async (
 
   const prompt = `
 **Role:**
-You are a visual composition expert specializing in product placement. Your task is to take a product image (plant or wall tile) and seamlessly integrate it into a room scene, placing it logically based on the product's type and size.
+You are a visual composition expert specializing in product placement. Your task is to take a product image (plant or gallery wall) and seamlessly integrate it into a room scene, placing it logically based on the product's category.
 
 **Specifications:**
 -   **Product to add:**
     The first image provided. It may be surrounded by black padding or background, which you should ignore and treat as transparent and only keep the product.
 -   **Room scene to use:**
     The second image provided. It may also be surrounded by black padding, which you should ignore.
--   **Product Type:** ${productType}
--   **Product Size:** ${productSize}
+-   **Product Category:** ${productType}
 -   **Placement Instructions (Crucial):**
     ${getPlacementInstructions(productType, productSize)}
     -   You should only place the product once in the most logical location.
@@ -276,7 +275,7 @@ You are a visual composition expert specializing in product placement. Your task
 -   **Final Image Requirements:**
     -   The output image's style, lighting, shadows, reflections, and camera perspective must exactly match the original scene.
     -   Do not just copy and paste the product. You must intelligently re-render it to fit the context. Adjust the product's perspective and orientation to its most natural position, scale it appropriately, and ensure it casts realistic shadows according to the scene's light sources.
-    -   The product must have proportional realism. A small plant cannot be bigger than a sofa, and a wall tile should be appropriately sized for the wall space.
+    -   The product must have proportional realism. A small plant cannot be bigger than a sofa, and a gallery wall should be appropriately sized for the wall space.
     -   You must not return the original scene image without product placement. The product must always be present in the composite image.
     -   Do not add any other items, decorations, or objects beyond the single product provided.
 
