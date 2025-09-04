@@ -48,9 +48,40 @@ const sceneLoadingMessages = [
     "Setting up your design canvas..."
 ];
 
+// Demo spaces data
+const DEMO_SPACES = [
+    {
+        id: 'corporate-office',
+        name: 'Corporate Office',
+        imagePath: '/assets/spaces/corporate office.png'
+    },
+    {
+        id: 'living-room-1',
+        name: 'Living Room 1',
+        imagePath: '/assets/spaces/living room 1.jpeg'
+    },
+    {
+        id: 'living-room-2',
+        name: 'Living Room 2',
+        imagePath: '/assets/spaces/living room 2.jpeg'
+    },
+    {
+        id: 'personal-office',
+        name: 'Personal Office',
+        imagePath: '/assets/spaces/personal office.jpg'
+    }
+];
+
 
 const App: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<'home' | 'step1' | 'step2' | 'step3'>('home');
+  // Initialize currentStep from URL or default to 'home'
+  const getInitialStep = (): 'home' | 'step1' | 'step2' | 'step3' => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const step = urlParams.get('step');
+    return (step === 'home' || step === 'step1' || step === 'step2' || step === 'step3') ? step : 'home';
+  };
+
+  const [currentStep, setCurrentStep] = useState<'home' | 'step1' | 'step2' | 'step3'>(getInitialStep());
   const [sceneImage, setSceneImage] = useState<File | null>(null);
   const [selectedPlant, setSelectedPlant] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -61,8 +92,22 @@ const App: React.FC = () => {
   const [debugImageUrl, setDebugImageUrl] = useState<string | null>(null);
   const [debugPrompt, setDebugPrompt] = useState<string | null>(null);
   const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
+  const [selectedDemoSpace, setSelectedDemoSpace] = useState<string | null>(null);
 
   const sceneImageUrl = sceneImage ? URL.createObjectURL(sceneImage) : null;
+
+  // Helper function to update URL with current step
+  const updateStepInUrl = (step: 'home' | 'step1' | 'step2' | 'step3') => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('step', step);
+    window.history.replaceState({}, '', url.toString());
+  };
+
+  // Wrapper function to update both state and URL
+  const setCurrentStepWithUrl = (step: 'home' | 'step1' | 'step2' | 'step3') => {
+    setCurrentStep(step);
+    updateStepInUrl(step);
+  };
 
   // Handle manual plant selection
   const handlePlantSelect = useCallback((plant: Product) => {
@@ -145,7 +190,7 @@ const App: React.FC = () => {
       // Update the scene with the new composite image
       const newSceneFile = dataURLtoFile(finalImageUrl, `generated-scene-${Date.now()}.jpeg`);
       setSceneImage(newSceneFile);
-      setCurrentStep('step3');
+      setCurrentStepWithUrl('step3');
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -157,36 +202,40 @@ const App: React.FC = () => {
   }, [sceneImage, selectedPlant, getOptimalPlantPlacement]);
 
 
-  const handleInstantStart = useCallback(async () => {
+  const handleInstantStart = useCallback(async (spaceId?: string) => {
     setError(null);
     try {
-      // Fetch the office scene
-      const sceneResponse = await fetch('/assets/office.png');
+      // Use selected space or default to first space
+      const spaceToUse = spaceId || selectedDemoSpace || DEMO_SPACES[0].id;
+      const space = DEMO_SPACES.find(s => s.id === spaceToUse) || DEMO_SPACES[0];
+
+      // Fetch the selected demo space
+      const sceneResponse = await fetch(space.imagePath);
 
       if (!sceneResponse.ok) {
-        throw new Error('Failed to load office scene');
+        throw new Error(`Failed to load ${space.name} scene`);
       }
 
       // Convert scene to File object
       const sceneBlob = await sceneResponse.blob();
-      const sceneFile = new File([sceneBlob], 'office.png', { type: 'image/jpeg' });
+      const sceneFile = new File([sceneBlob], `${space.name}.jpg`, { type: 'image/jpeg' });
 
-      // Update state with the office scene
+      // Update state with the selected scene
       setSceneImage(sceneFile);
-      setCurrentStep('step2');
+      setCurrentStepWithUrl('step2');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      setError(`Could not load office scene. Details: ${errorMessage}`);
+      setError(`Could not load demo scene. Details: ${errorMessage}`);
       console.error(err);
     }
-  }, []);
+  }, [selectedDemoSpace]);
 
 
 
 
   const handleReset = useCallback(() => {
     // Let useEffect handle URL revocation
-    setCurrentStep('home');
+    setCurrentStepWithUrl('home');
     setSceneImage(null);
     setError(null);
     setIsLoading(false);
@@ -197,13 +246,13 @@ const App: React.FC = () => {
 
   const handleChangeScene = useCallback(() => {
     setSceneImage(null);
-    setCurrentStep('step1');
+    setCurrentStepWithUrl('step1');
     setDebugImageUrl(null);
     setDebugPrompt(null);
   }, []);
 
   const handleStartDesign = useCallback(() => {
-    setCurrentStep('step1');
+    setCurrentStepWithUrl('step1');
   }, []);
 
   const handleSceneUpload = useCallback(async (file: File) => {
@@ -215,7 +264,7 @@ const App: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       setSceneImage(file);
-      setCurrentStep('step2');
+      setCurrentStepWithUrl('step2');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setError(`Could not process scene image. Details: ${errorMessage}`);
@@ -224,6 +273,11 @@ const App: React.FC = () => {
     }
   }, []);
 
+
+  // Initialize URL state on component mount
+  useEffect(() => {
+    updateStepInUrl(currentStep);
+  }, []); // Only run once on mount
 
   useEffect(() => {
     // Clean up the scene's object URL when the component unmounts or the URL changes
@@ -288,7 +342,7 @@ const App: React.FC = () => {
             Mixtiles Designer
           </h1>
           <h2 className="text-xl md:text-2xl text-gray-600 font-medium mb-8">
-            Space Design Reinvented
+            Space Design made easy
           </h2>
           
 
@@ -297,7 +351,7 @@ const App: React.FC = () => {
             onClick={handleStartDesign} 
             className="bg-pink-500 text-white px-6 py-3 rounded-md font-medium hover:bg-pink-600 transition-all duration-200 shadow-sm hover:shadow-md"
           >
-            Design Your Space 
+            Let's start
           </button>
         </div>
       );
@@ -310,7 +364,7 @@ const App: React.FC = () => {
           {/* Go Back Button */}
           <div className="text-left mb-6">
             <button
-              onClick={() => setCurrentStep('home')}
+              onClick={() => setCurrentStepWithUrl('home')}
               className="inline-flex items-center text-pink-600 hover:text-pink-800 font-medium transition-colors"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -325,10 +379,51 @@ const App: React.FC = () => {
             <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-100 rounded-full mb-4">
               <span className="text-pink-600 font-bold text-lg">1</span>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Upload Your Space</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
-              Start by uploading a photo of your room or space where you want to place our products.
-            </p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Choose a Space</h2>
+            
+            {/* Demo Spaces Section */}
+            <div className="mb-8">
+              <p className="text-sm text-gray-500 text-center mb-6">
+                Click on any space below to try the demo
+              </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-6">
+                {DEMO_SPACES.map(space => (
+                  <div 
+                    key={space.id}
+                    onClick={() => {
+                      setSelectedDemoSpace(space.id);
+                      handleInstantStart(space.id);
+                    }}
+                    className={`bg-white rounded-lg shadow-sm border-2 p-3 text-center cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 ${
+                      selectedDemoSpace === space.id 
+                        ? 'border-pink-500 bg-pink-50' 
+                        : 'border-gray-200 hover:border-pink-300'
+                    }`}
+                  >
+                    <div className="aspect-square w-full bg-gray-50 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={space.imagePath} 
+                        alt={space.name} 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                    <h4 className="text-sm font-medium text-gray-900 truncate">{space.name}</h4>
+                    {selectedDemoSpace === space.id && (
+                      <div className="text-xs text-pink-600 mt-1 font-medium">✓ Selected</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Upload Section */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-center mb-4 text-gray-800">Or Upload Your Own Space</h3>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                Upload a photo of your room or space where you want to place our products
+              </p>
+            </div>
+
             <div className="card p-6 max-w-md mx-auto">
               {isSceneLoading ? (
                 <div className="min-h-[300px] flex items-center justify-center bg-gray-50 rounded-lg">
@@ -347,16 +442,6 @@ const App: React.FC = () => {
               )}
             </div>
           </div>
-          
-          {/* Demo Link */}
-          <div className="text-center mt-6">
-            <button
-              onClick={handleInstantStart}
-              className="text-pink-600 hover:text-pink-800 font-medium underline text-sm"
-            >
-              Try Demo with Sample Images
-            </button>
-          </div>
         </div>
       );
     }
@@ -368,7 +453,7 @@ const App: React.FC = () => {
           {/* Go Back Button */}
           <div className="text-left mb-6">
             <button
-              onClick={() => setCurrentStep('step1')}
+              onClick={() => setCurrentStepWithUrl('step1')}
               className="inline-flex items-center text-pink-600 hover:text-pink-800 font-medium transition-colors"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -504,7 +589,7 @@ const App: React.FC = () => {
         {/* Go Back Button */}
         <div className="text-left mb-6">
           <button
-            onClick={() => setCurrentStep('step2')}
+            onClick={() => setCurrentStepWithUrl('step2')}
             className="inline-flex items-center text-pink-600 hover:text-pink-800 font-medium transition-colors"
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
